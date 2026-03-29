@@ -110,6 +110,20 @@ fly deploy
 - **New project → Deploy from GitHub** → pick this repo.
 - Set **Dockerfile path** to `./Dockerfile` and **context** to `.` (repository root where `Dockerfile` lives).
 
+## Troubleshooting: `Publish directory build does not exist`
+
+That message means the host is treating the project as a **static site** (it looks for a `build/` folder after a front-end build). **This app is not a static site** — it is a **Docker** image that runs **Next.js + Python** together.
+
+**On Render**
+
+1. Do **not** use **Static Site**. Use **Web Service**.
+2. In the service settings, set **Runtime** to **Docker** (not Node, not static).
+3. **Dockerfile path:** `Dockerfile` · **Docker build context:** `.` (repo root).
+4. Clear or ignore any **Publish directory** / **static publish** field — that applies only to static sites, not Docker web services.
+5. If the wrong service type was created, **delete** it and create a new **Web Service** with Docker as above.
+
+You can also use **New → Blueprint** and point at this repo so [`render.yaml`](render.yaml) is applied (it defines a **Docker `web`** service, not a static site).
+
 ## What does not work on Vercel alone?
 
 [Vercel](https://vercel.com) serverless functions do not run your bundled **Python + PyJHora** process. Use Docker on Render, Fly, Railway, etc., or split into a separate Python API.
