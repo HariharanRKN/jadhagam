@@ -1,0 +1,132 @@
+.page {
+  min-height: 100vh;
+  padding: 2rem 1.5rem 3rem;
+  background: var(--page-bg, #f4f6f8);
+  color: var(--page-fg, #0f172a);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.page.dark {
+  --page-bg: #020617;
+  --page-fg: #e2e8f0;
+}
+
+.header {
+  max-width: 1100px;
+  margin: 0 auto 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.titleBlock h1 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.35rem;
+}
+
+.titleBlock p {
+  font-size: 0.875rem;
+  color: var(--muted, #64748b);
+  max-width: 36rem;
+  line-height: 1.5;
+}
+
+.page.dark .titleBlock p {
+  color: #94a3b8;
+}
+
+.themeToggle {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--btn-border, #cbd5e1);
+  background: var(--btn-bg, #fff);
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.themeToggle:hover {
+  background: var(--btn-hover, #f1f5f9);
+}
+
+.page.dark .themeToggle {
+  --btn-border: #334155;
+  --btn-bg: #1e293b;
+  --btn-hover: #334155;
+}
+
+.charts {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.chartBlock {
+  flex: 1 1 280px;
+  max-width: 480px;
+}
+
+.chartBlock h2 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted, #64748b);
+  margin-bottom: 0.75rem;
+}
+
+.page.dark .chartBlock h2 {
+  color: #94a3b8;
+}
+
+.metaLine {
+  font-size: 0.75rem;
+  color: var(--muted, #64748b);
+  margin-top: 0.5rem;
+  max-width: 42rem;
+  line-height: 1.45;
+}
+
+.page.dark .metaLine {
+  color: #94a3b8;
+}
+
+.loadError {
+  max-width: 1100px;
+  margin: 0 auto 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+.page.dark .loadError {
+  background: #450a0a;
+  color: #fecaca;
+}
+
+.apiError {
+  max-width: 1100px;
+  margin: 0 auto 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.875rem;
+}
+
+.page.dark .apiError {
+  background: #431407;
+  color: #fed7aa;
+}
