@@ -2,11 +2,56 @@
 
 This app needs **Node.js** (Next.js) and **Python** (PyJHora + Swiss Ephemeris) on the same host. The included **Dockerfile** builds both.
 
-## Prerequisites
+## Deploy in about 10 minutes (GitHub private + Render)
 
-- Push this repository to **GitHub** (private is fine).
-- Install [Docker](https://docs.docker.com/get-docker/) locally to test:  
-  `docker compose up --build` then open http://localhost:3000
+Do these steps **on your machine** (this environment cannot log in to GitHub or Render for you).
+
+### 1) Commit and push to a private GitHub repo
+
+Repo root must be this folder (`Dockerfile`, `horoscope.py`, `kundli-ui/` at the top level).
+
+```bash
+cd /path/to/play   # this project root
+git add -A && git status
+git commit -m "Deploy: Docker, PyJHora deps, compose port"   # skip if nothing to commit
+```
+
+Create a **new private repository** on [github.com/new](https://github.com/new) (any name, e.g. `kundli`). **Do not** add a README/license (keep it empty).
+
+Then:
+
+```bash
+git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
+git branch -M main
+git push -u origin main
+```
+
+### 2) Create a Render web service
+
+1. Sign up / log in at [render.com](https://render.com) and **connect GitHub**.
+2. **New +** → **Web Service** → select your repo.
+3. Settings:
+   - **Runtime:** Docker
+   - **Dockerfile path:** `Dockerfile`
+   - **Docker build context:** `.` (repository root)
+   - **Instance type:** choose the smallest paid Docker instance if free Docker is unavailable; free tiers change over time.
+4. **Create Web Service**. Wait for the first build (several minutes). Open the **`.onrender.com` URL** when deploy is live.
+
+Render sets **`PORT`** automatically; the Next.js image listens on that port.
+
+### 3) Smoke test
+
+- Open the site URL → you should see the chart UI.
+- Submit the birth form → **Compute chart** should return data (Python runs inside the same container).
+
+### Local Docker (optional)
+
+- Install [Docker](https://docs.docker.com/get-docker/) and run:  
+  `docker compose up --build` → **http://localhost:3001** (see `compose.yaml`; use `3000:3000` if port 3000 is free).
+
+## Prerequisites (reference)
+
+- Push this repository to **GitHub** (private is fine) — see steps above.
 
 ## Option A: Render
 

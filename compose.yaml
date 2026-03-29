@@ -2,7 +2,8 @@ services:
   web:
     build: .
     ports:
-      - "3000:3000"
+      # Use 3001 if something else (e.g. `next dev`) already uses 3000 on the host
+      - "3001:3000"
     environment:
       NODE_ENV: production
       # Optional: override Photon backend (default: https://photon.komoot.io)
