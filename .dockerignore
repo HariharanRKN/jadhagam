@@ -1,0 +1,9 @@
+.git
+**/.DS_Store
+kundli-ui/node_modules
+kundli-ui/.next
+**/__pycache__
+*.pyc
+.env
+.env.*
+!.env.example
