@@ -2,7 +2,15 @@
 
 This app needs **Node.js** (Next.js) and **Python** (PyJHora + Swiss Ephemeris) on the same host. The included **Dockerfile** builds both.
 
-## Deploy in about 10 minutes (GitHub private + Render)
+## GitHub Desktop → push code
+
+1. In **GitHub Desktop**: **File → Add Local Repository** → choose this project folder (`play`).
+2. If the remote is missing: **Repository → Repository Settings → Remote** → URL `https://github.com/HariharanRKN/jadhagam.git`.
+3. Commit any pending changes, then **Push origin** (branch `main`).
+
+Until the code is on GitHub, cloud hosts cannot build it.
+
+## Deploy in about 10 minutes (GitHub + Render — no GitHub Actions)
 
 Do these steps **on your machine** (this environment cannot log in to GitHub or Render for you).
 
@@ -63,21 +71,39 @@ Render sets **`PORT`** automatically; the Next.js image listens on that port.
 
 Optional env var: `PHOTON_API_URL` — base URL for a [self-hosted Photon](https://github.com/komoot/photon) instance.
 
-## Option B: Fly.io
+## Option B: Fly.io + GitHub Actions (deploy on every push)
 
-1. Install the [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/).
-2. From the folder that contains `Dockerfile` and `fly.toml`:
+After code is on GitHub (`main`):
 
-   ```bash
-   fly auth login
-   fly launch
-   ```
-
-   Edit `app` in `fly.toml` if the name is taken. Then:
+1. Install [flyctl](https://fly.io/docs/hands-on/install-flyctl/) and run **`fly auth login`** once.
+2. Create the app name used in `fly.toml` (default **`jadhagam`**). If the name is taken, change `app` in `fly.toml` and use that name here:
 
    ```bash
-   fly deploy
+   fly apps create jadhagam
    ```
+
+3. Create a deploy token and add it to GitHub (**do not paste it in chat**):
+
+   ```bash
+   fly tokens create deploy
+   ```
+
+   In the repo on GitHub: **Settings → Secrets and variables → Actions → New repository secret**  
+   Name: **`FLY_API_TOKEN`** — Value: the token from the command above.
+
+4. Push to `main` (e.g. from GitHub Desktop). The workflow **Deploy to Fly.io** (`.github/workflows/deploy-fly.yml`) runs **`flyctl deploy --remote-only`**.
+
+5. Open the URL from **`fly apps open`** or the Fly dashboard.
+
+Manual re-run: **Actions** tab → **Deploy to Fly.io** → **Run workflow**.
+
+### Fly.io from your laptop only (no Actions)
+
+```bash
+fly auth login
+fly apps create jadhagam   # if not created yet
+fly deploy
+```
 
 ## Option C: Railway / other Docker hosts
 

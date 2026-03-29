@@ -1,8 +1,8 @@
 # Fly.io: install CLI, then from this directory run: fly launch --no-deploy && fly deploy
 # https://fly.io/docs/languages-and-frameworks/docker/
 
-# Change to a unique app name on first deploy: fly apps create <name>
-app = "kundli-change-me"
+# Must match an app you create once: fly apps create jadhagam
+app = "jadhagam"
 primary_region = "bom"
 
 [build]
