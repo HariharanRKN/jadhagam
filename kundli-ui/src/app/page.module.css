@@ -130,3 +130,248 @@
   background: #431407;
   color: #fed7aa;
 }
+
+.tabBar {
+  max-width: 1100px;
+  margin: 0 auto 1rem;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.tabBtn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: inherit;
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabBtnActive {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+}
+
+.page.dark .tabBtn {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.page.dark .tabBtnActive {
+  background: #14b8a6;
+  border-color: #14b8a6;
+  color: #042f2e;
+}
+
+.trackerWrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.trackerSection {
+  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
+.page.dark .trackerSection {
+  border-color: #334155;
+  background: rgba(15, 23, 42, 0.92);
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sectionHeader p {
+  margin: 0.35rem 0 1rem;
+  font-size: 0.875rem;
+  color: var(--muted, #64748b);
+}
+
+.page.dark .sectionHeader p {
+  color: #94a3b8;
+}
+
+.trackerGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.trackerPane,
+.resultCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.page.dark .trackerPane,
+.page.dark .resultCard {
+  border-color: #334155;
+  background: #020617;
+}
+
+.paneHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.paneHead h3,
+.resultCard h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.paneHead p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted, #64748b);
+  max-width: 16rem;
+}
+
+.page.dark .paneHead p {
+  color: #94a3b8;
+}
+
+.dateField,
+.fieldBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.dateField span,
+.fieldBlock span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted, #64748b);
+}
+
+.dateField input,
+.fieldBlock select {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: inherit;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.fieldBlock select[multiple] {
+  min-height: 9rem;
+}
+
+.page.dark .dateField input,
+.page.dark .fieldBlock select {
+  border-color: #475569;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.inlineMeta {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--muted, #64748b);
+}
+
+.page.dark .inlineMeta {
+  color: #94a3b8;
+}
+
+.inlineError {
+  margin: 0.5rem 0 0;
+  color: #b91c1c;
+  font-size: 0.875rem;
+}
+
+.page.dark .inlineError {
+  color: #fca5a5;
+}
+
+.searchControls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.25fr) minmax(200px, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.computeBox {
+  display: flex;
+  align-items: end;
+}
+
+.computeBtn {
+  border: none;
+  border-radius: 10px;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 0.8rem 1.25rem;
+  cursor: pointer;
+}
+
+.computeBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.searchSummary {
+  margin-top: 1rem;
+}
+
+.rangeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rangeChip {
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-size: 0.8125rem;
+}
+
+.page.dark .rangeChip {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.resultGrid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .trackerGrid,
+  .resultGrid,
+  .searchControls {
+    grid-template-columns: 1fr;
+  }
+
+  .computeBox {
+    align-items: stretch;
+  }
+
+  .computeBtn {
+    width: 100%;
+  }
+}
