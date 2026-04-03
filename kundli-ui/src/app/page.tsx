@@ -464,7 +464,8 @@ export default function Home() {
   }, [trackerDate]);
 
   useEffect(() => {
-    if (!marriageDerived?.timingRows.length) {
+    const timingRows = marriageDerived?.timingRows;
+    if (!timingRows?.length) {
       setMarriageSnapshots([]);
       return;
     }
@@ -472,7 +473,7 @@ export default function Home() {
     async function loadMarriageSnapshots() {
       setMarriageLoading(true);
       try {
-        const firstTen = marriageDerived.timingRows.slice(0, 10);
+        const firstTen = timingRows.slice(0, 10);
         const snapshots = await Promise.all(
           firstTen.map(async (row) => {
             const dateOnly = row.start.slice(0, 10);
