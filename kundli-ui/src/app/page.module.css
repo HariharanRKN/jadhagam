@@ -360,6 +360,40 @@
   gap: 1rem;
 }
 
+.tableWrapCustom {
+  overflow-x: auto;
+}
+
+.analysisTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.analysisTable th,
+.analysisTable td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.8rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.analysisTable th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted, #64748b);
+}
+
+.page.dark .analysisTable th,
+.page.dark .analysisTable td {
+  border-color: #334155;
+}
+
+.page.dark .analysisTable th {
+  color: #94a3b8;
+}
+
 @media (max-width: 900px) {
   .trackerGrid,
   .resultGrid,
