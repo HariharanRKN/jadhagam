@@ -1,6 +1,16 @@
 import { spawn } from "child_process";
 import { join } from "path";
 
+const IS_PROD = process.env.NODE_ENV === "production";
+
+function defaultHoroscopeScriptPath() {
+  return IS_PROD ? "/app/horoscope.py" : join(process.cwd(), "..", "horoscope.py");
+}
+
+function defaultHoroscopeRepoRoot() {
+  return IS_PROD ? "/app" : join(process.cwd(), "..");
+}
+
 /**
  * Spawns local Python + PyJHora. Requires Python 3, Swiss Ephemeris, and jhora on the server.
  * Not supported on typical Vercel serverless (no bundled Python); use self-hosted Node or a separate API.
@@ -106,9 +116,8 @@ export async function POST(request: Request) {
     return Response.json({ error: msg }, { status: 400 });
   }
 
-  const scriptPath =
-    process.env.HOROSCOPE_SCRIPT ?? join(process.cwd(), "..", "horoscope.py");
-  const repoRoot = join(scriptPath, "..");
+  const scriptPath = process.env.HOROSCOPE_SCRIPT ?? defaultHoroscopeScriptPath();
+  const repoRoot = defaultHoroscopeRepoRoot();
   const pythonBin = process.env.HOROSCOPE_PYTHON ?? "python3";
 
   const stdinObj: Record<string, unknown> = {

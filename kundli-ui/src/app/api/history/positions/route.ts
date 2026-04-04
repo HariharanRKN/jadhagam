@@ -1,8 +1,13 @@
 import { spawn } from "child_process";
 import { join } from "path";
 
+const IS_PROD = process.env.NODE_ENV === "production";
+
 function scriptPath() {
-  return process.env.HISTORY_DB_SCRIPT ?? join(process.cwd(), "..", "scripts", "history_db.py");
+  return process.env.HISTORY_DB_SCRIPT ??
+    (IS_PROD
+      ? "/app/scripts/history_db.py"
+      : join(process.cwd(), "..", "scripts", "history_db.py"));
 }
 
 function pythonBin() {
@@ -10,12 +15,15 @@ function pythonBin() {
 }
 
 function dbPath() {
-  return process.env.HISTORY_DB_PATH ?? join(process.cwd(), "..", "data", "planet_positions.sqlite");
+  return process.env.HISTORY_DB_PATH ??
+    (IS_PROD
+      ? "/app/data/planet_positions.sqlite"
+      : join(process.cwd(), "..", "data", "planet_positions.sqlite"));
 }
 
 async function runHistoryCommand(args: string[]) {
   const script = scriptPath();
-  const cwd = join(script, "..", "..");
+  const cwd = IS_PROD ? "/app" : join(process.cwd(), "..");
   const py = pythonBin();
 
   return await new Promise<{ ok: boolean; stdout: string; stderr: string; code: number | null }>((resolve) => {
