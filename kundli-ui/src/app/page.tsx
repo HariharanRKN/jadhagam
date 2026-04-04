@@ -469,11 +469,12 @@ export default function Home() {
       setMarriageSnapshots([]);
       return;
     }
+    const availableTimingRows = timingRows;
     let cancelled = false;
     async function loadMarriageSnapshots() {
       setMarriageLoading(true);
       try {
-        const firstTen = timingRows.slice(0, 10);
+        const firstTen = availableTimingRows.slice(0, 10);
         const snapshots = await Promise.all(
           firstTen.map(async (row) => {
             const dateOnly = row.start.slice(0, 10);

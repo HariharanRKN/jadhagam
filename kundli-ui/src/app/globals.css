@@ -26,7 +26,14 @@ body {
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-geist-sans), var(--font-tamil), system-ui, sans-serif;
+  font-family:
+    "Noto Sans Tamil",
+    "Avenir Next",
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
