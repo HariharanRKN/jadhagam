@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { SouthIndianChart } from "@/components/SouthIndianChart/SouthIndianChart";
 import { BirthInputForm } from "@/components/BirthInputForm";
+import { PlacePhotonField } from "@/components/PlacePhotonField";
 import { PlanetaryTableTamil } from "@/components/tables/PlanetaryTableTamil";
 import { DashaBhuktiTableTamil } from "@/components/tables/DashaBhuktiTableTamil";
 import { VimsottariExpander } from "@/components/tables/VimsottariExpander";
 import type { AntaraRow, ChartDataPayload } from "@/types/chartData";
 import styles from "./page.module.css";
 
-type TrackerTab = "kundli" | "kochar" | "marriage";
+type TrackerTab = "kundli" | "kochar" | "marriage" | "family";
 
 type HistoricalPositionsResponse = {
   dateIst: string;
@@ -67,6 +68,18 @@ type MarriagePermutationStatusRow = {
   houseOrder: [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11];
   occurred: boolean;
   firstMatch: MarriageTimingRow | null;
+};
+
+type FamilyFormState = {
+  name: string;
+  birthDate: string;
+  birthTime: string;
+  placeName: string;
+  lat: string;
+  lng: string;
+  loading: boolean;
+  error: string | null;
+  result: ChartDataPayload | null;
 };
 
 const RASI_OPTIONS = [
@@ -232,6 +245,76 @@ function buildPermutationLabelFromLords(
   return houseOrder.map((house) => LORD_TAMIL[houseToLord[house]]).join(" / ");
 }
 
+function parseDatePart(value: string) {
+  return value.slice(0, 10);
+}
+
+function latestStartedRow<T extends { start: string }>(rows: T[], selectedDate: string) {
+  return [...rows]
+    .filter((row) => parseDatePart(row.start) <= selectedDate)
+    .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }))
+    .at(-1) ?? null;
+}
+
+function moonRasiFromPlanets(planets: { planetId: number; rasi: number }[]) {
+  return planets.find((planet) => planet.planetId === 1)?.rasi ?? null;
+}
+
+function housesOwnedByPlanet(ascendantRasi: number, planetId: number) {
+  const houses: number[] = [];
+  for (let house = 1; house <= 12; house++) {
+    const rasi = rasiForHouse(ascendantRasi, house);
+    if (SIGN_LORD[rasi] === planetId) {
+      houses.push(house);
+    }
+  }
+  return houses;
+}
+
+function createFamilyFormState(index: number): FamilyFormState {
+  const defaults = [
+    {
+      name: "",
+      birthDate: "1994-05-10",
+      birthTime: "17:00",
+      placeName: "Puducherry, IN",
+      lat: "11.9416",
+      lng: "79.8083",
+    },
+    {
+      name: "",
+      birthDate: "",
+      birthTime: "",
+      placeName: "",
+      lat: "",
+      lng: "",
+    },
+    {
+      name: "",
+      birthDate: "",
+      birthTime: "",
+      placeName: "",
+      lat: "",
+      lng: "",
+    },
+    {
+      name: "",
+      birthDate: "",
+      birthTime: "",
+      placeName: "",
+      lat: "",
+      lng: "",
+    },
+  ] as const;
+
+  return {
+    ...defaults[index],
+    loading: false,
+    error: null,
+    result: null,
+  };
+}
+
 export default function Home() {
   const [dark, setDark] = useState(false);
   const [data, setData] = useState<ChartDataPayload | null>(null);
@@ -257,6 +340,14 @@ export default function Home() {
     HistoricalPositionsResponse[]
   >([]);
   const [todayIso, setTodayIso] = useState("2026-04-03");
+  const [familyInsightDate, setFamilyInsightDate] = useState("2026-04-05");
+  const [familyTransitSnapshot, setFamilyTransitSnapshot] =
+    useState<HistoricalPositionsResponse | null>(null);
+  const [familyTransitLoading, setFamilyTransitLoading] = useState(false);
+  const [familyTransitError, setFamilyTransitError] = useState<string | null>(null);
+  const [familyForms, setFamilyForms] = useState<FamilyFormState[]>(() =>
+    Array.from({ length: 4 }, (_, index) => createFamilyFormState(index))
+  );
 
   const theme = dark ? "dark" : "light";
 
@@ -405,7 +496,45 @@ export default function Home() {
 
   useEffect(() => {
     setTodayIso(new Date().toISOString().slice(0, 10));
+    setFamilyInsightDate(new Date().toISOString().slice(0, 10));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFamilyTransitLoading(true);
+    setFamilyTransitError(null);
+    fetch(`/api/history/positions?date=${encodeURIComponent(familyInsightDate)}`)
+      .then(async (res) => {
+        const json = (await res.json()) as HistoricalPositionsResponse & {
+          error?: string;
+          detail?: string;
+        };
+        if (!res.ok) {
+          throw new Error(json.detail || json.error || `Request failed (${res.status})`);
+        }
+        return json;
+      })
+      .then((json) => {
+        if (!cancelled) {
+          setFamilyTransitSnapshot(json);
+        }
+      })
+      .catch((error: Error) => {
+        if (!cancelled) {
+          setFamilyTransitSnapshot(null);
+          setFamilyTransitError(error.message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setFamilyTransitLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [familyInsightDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -562,6 +691,140 @@ export default function Home() {
     }
   }
 
+  function updateFamilyForm(
+    index: number,
+    field: keyof Omit<FamilyFormState, "loading" | "error" | "result">,
+    value: string
+  ) {
+    setFamilyForms((current) =>
+      current.map((form, formIndex) =>
+        formIndex === index ? { ...form, [field]: value } : form
+      )
+    );
+  }
+
+  function applyFamilyPlaceSelection(
+    index: number,
+    detail: { formattedAddress: string; lat: number; lng: number }
+  ) {
+    setFamilyForms((current) =>
+      current.map((form, formIndex) =>
+        formIndex === index
+          ? {
+              ...form,
+              placeName: detail.formattedAddress,
+              lat: detail.lat.toFixed(6),
+              lng: detail.lng.toFixed(6),
+            }
+          : form
+      )
+    );
+  }
+
+  async function computeFamilyChart(index: number) {
+    const form = familyForms[index];
+    const [year, month, day] = form.birthDate.split("-").map(Number);
+    const [hour, minute] = form.birthTime.split(":").map(Number);
+    const lat = Number(form.lat);
+    const lng = Number(form.lng);
+
+    if (
+      !form.birthDate ||
+      !form.birthTime ||
+      !form.placeName.trim() ||
+      !Number.isFinite(year) ||
+      !Number.isFinite(month) ||
+      !Number.isFinite(day) ||
+      !Number.isFinite(hour) ||
+      !Number.isFinite(minute) ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng)
+    ) {
+      setFamilyForms((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === index
+            ? { ...item, error: "Enter valid birth, place, latitude, and longitude values." }
+            : item
+        )
+      );
+      return;
+    }
+
+    setFamilyForms((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index
+          ? { ...item, loading: true, error: null }
+          : item
+      )
+    );
+
+    try {
+      const tzRes = await fetch(
+        `/api/timezone?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(
+          String(lng)
+        )}`
+      );
+      const tzJson = (await tzRes.json()) as { offsetHours?: number; error?: string };
+      if (!tzRes.ok || typeof tzJson.offsetHours !== "number") {
+        throw new Error(tzJson.error || "Timezone lookup failed");
+      }
+
+      const payload: Record<string, unknown> = {
+        birth: {
+          year,
+          month,
+          day,
+          hour,
+          minute,
+          second: 0,
+        },
+        place: {
+          name: form.placeName.trim(),
+          lat,
+          lng,
+          tz: tzJson.offsetHours,
+        },
+        transit: null,
+      };
+      if (form.name.trim()) {
+        payload.name = form.name.trim();
+      }
+
+      const res = await fetch("/api/horoscope", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = (await res.json()) as ChartDataPayload & {
+        error?: string;
+        detail?: string;
+      };
+      if (!res.ok) {
+        throw new Error(json.detail || json.error || `Request failed (${res.status})`);
+      }
+
+      setFamilyForms((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === index
+            ? { ...item, loading: false, error: null, result: json }
+            : item
+        )
+      );
+    } catch (error) {
+      setFamilyForms((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === index
+            ? {
+                ...item,
+                loading: false,
+                error: error instanceof Error ? error.message : "Could not compute chart",
+              }
+            : item
+        )
+      );
+    }
+  }
+
   return (
     <div className={`${styles.page} ${dark ? styles.dark : ""}`}>
       <header className={styles.header}>
@@ -631,6 +894,13 @@ export default function Home() {
           onClick={() => setActiveTab("marriage")}
         >
           திருமணம்
+        </button>
+        <button
+          type="button"
+          className={`${styles.tabBtn} ${activeTab === "family" ? styles.tabBtnActive : ""}`}
+          onClick={() => setActiveTab("family")}
+        >
+          Family
         </button>
       </div>
 
@@ -1024,6 +1294,241 @@ export default function Home() {
             ) : (
               <p className={styles.inlineMeta}>காட்ட ஜாதகம் எதுவும் இல்லை.</p>
             )}
+          </section>
+        </div>
+      )}
+
+      {activeTab === "family" && (
+        <div className={styles.familyWrap}>
+          <section className={styles.trackerSection}>
+            <div className={styles.sectionHeader}>
+              <h2>Family Inputs</h2>
+              <p>Enter up to four birth profiles and compute each kundli independently.</p>
+            </div>
+            <div className={styles.familyGrid}>
+              {familyForms.map((form, index) => (
+                <div key={`family-form-${index}`} className={styles.familyCard}>
+                  <h3>Profile {index + 1}</h3>
+                  <div className={styles.familyFields}>
+                    <label className={styles.fieldBlock}>
+                      <span>Name</span>
+                      <input
+                        type="text"
+                        value={form.name}
+                        onChange={(e) => updateFamilyForm(index, "name", e.target.value)}
+                      />
+                    </label>
+                    <label className={styles.fieldBlock}>
+                      <span>Birth Date</span>
+                      <input
+                        type="date"
+                        value={form.birthDate}
+                        onChange={(e) =>
+                          updateFamilyForm(index, "birthDate", e.target.value)
+                        }
+                      />
+                    </label>
+                    <label className={styles.fieldBlock}>
+                      <span>Birth Time</span>
+                      <input
+                        type="time"
+                        value={form.birthTime}
+                        onChange={(e) =>
+                          updateFamilyForm(index, "birthTime", e.target.value)
+                        }
+                      />
+                    </label>
+                    <PlacePhotonField
+                      label="Place Name"
+                      className={styles.fieldBlock}
+                      syncValue={form.placeName}
+                      onPlaceSelected={(detail) =>
+                        applyFamilyPlaceSelection(index, detail)
+                      }
+                      dark={dark}
+                    />
+                    <label className={styles.fieldBlock}>
+                      <span>Latitude</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={form.lat}
+                        onChange={(e) => updateFamilyForm(index, "lat", e.target.value)}
+                      />
+                    </label>
+                    <label className={styles.fieldBlock}>
+                      <span>Longitude</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={form.lng}
+                        onChange={(e) => updateFamilyForm(index, "lng", e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.computeBtn}
+                    disabled={form.loading}
+                    onClick={() => void computeFamilyChart(index)}
+                  >
+                    {form.loading ? "Computing…" : "Compute"}
+                  </button>
+                  {form.error ? (
+                    <p className={styles.inlineError}>{form.error}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.trackerSection}>
+            <div className={styles.sectionHeader}>
+              <h2>Family Outputs</h2>
+              <p>Each profile shows the kundli, a date-based dasha snapshot, the matching kochara chart, and the full Vimsottari expander.</p>
+            </div>
+            <div className={styles.familyDateBar}>
+              <label className={styles.dateField}>
+                <span>Selected Date</span>
+                <input
+                  type="date"
+                  value={familyInsightDate}
+                  onChange={(e) => setFamilyInsightDate(e.target.value)}
+                  max={todayIso}
+                />
+              </label>
+              <p className={styles.inlineMeta}>
+                This date drives the active dasha/bhukti/antara and kochara view for all four profiles.
+              </p>
+            </div>
+            <div className={styles.familyGrid}>
+              {familyForms.map((form, index) => (
+                <div key={`family-result-${index}`} className={styles.familyCard}>
+                  <h3>{form.result?.meta.name || form.name || `Profile ${index + 1}`}</h3>
+                  {form.result ? (
+                    <div className={styles.familyResultStack}>
+                      <div>
+                        <p className={styles.inlineMeta}>
+                          {form.result.meta.dob} · {form.result.meta.tob} ·{" "}
+                          {form.result.meta.place}
+                        </p>
+                        <SouthIndianChart
+                          planetsByRasi={form.result.birth.planetsByRasi}
+                          ascendantRasi={form.result.birth.ascendantRasi}
+                          title="ஜனன குண்டலி"
+                          theme={theme}
+                        />
+                      </div>
+                      <div className={styles.familyModule}>
+                        <h4>Date Snapshot</h4>
+                        {(() => {
+                          const currentMaha = latestStartedRow(
+                            form.result.vimsottari.mahadasha,
+                            familyInsightDate
+                          );
+                          const currentBhukti = latestStartedRow(
+                            form.result.vimsottari.bhukti,
+                            familyInsightDate
+                          );
+                          const currentAntara = latestStartedRow(
+                            form.result.vimsottari.antara,
+                            familyInsightDate
+                          );
+                          const ascendant = form.result.birth.ascendantRasi;
+                          const impactedHouseText = (planetId: number | undefined) => {
+                            if (planetId == null) return "—";
+                            const houses = housesOwnedByPlanet(ascendant, planetId);
+                            return houses.length
+                              ? houses.map((house) => `${house}ஆம் பாவம்`).join(", ")
+                              : "—";
+                          };
+                          return (
+                            <div className={styles.timelineList}>
+                              <div className={styles.timelineRow}>
+                                <strong>
+                                  மஹாதசை: {currentMaha ? LORD_TAMIL[currentMaha.lord] : "—"}
+                                </strong>
+                                <span>
+                                  {currentMaha
+                                    ? `${currentMaha.start} → ${currentMaha.end ?? "—"}`
+                                    : "இந்த தேதிக்கு தரவு இல்லை"}
+                                </span>
+                                <span>
+                                  பாதிக்கும் பாவங்கள்: {impactedHouseText(currentMaha?.lord)}
+                                </span>
+                              </div>
+                              <div className={styles.timelineRow}>
+                                <strong>
+                                  புக்தி: {currentBhukti ? LORD_TAMIL[currentBhukti.lord] : "—"}
+                                </strong>
+                                <span>
+                                  {currentBhukti
+                                    ? `${currentBhukti.start} → ${currentBhukti.end ?? "—"}`
+                                    : "இந்த தேதிக்கு தரவு இல்லை"}
+                                </span>
+                                <span>
+                                  பாதிக்கும் பாவங்கள்: {impactedHouseText(currentBhukti?.lord)}
+                                </span>
+                              </div>
+                              <div className={styles.timelineRow}>
+                                <strong>
+                                  அந்தரம்: {currentAntara ? LORD_TAMIL[currentAntara.lord] : "—"}
+                                </strong>
+                                <span>
+                                  {currentAntara
+                                    ? `${currentAntara.start} → ${currentAntara.end ?? "—"}`
+                                    : "இந்த தேதிக்கு தரவு இல்லை"}
+                                </span>
+                                <span>
+                                  பாதிக்கும் பாவங்கள்: {impactedHouseText(currentAntara?.lord)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className={styles.familyModule}>
+                        <h4>கோசாரம்</h4>
+                        <p className={styles.inlineMeta}>
+                          தேர்ந்தெடுத்த தேதிக்கான கோசாரம். லக்னத்துடன், பிறப்பு சந்திர ராசியும் ஒளிவட்டமாகக் காட்டப்படுகிறது.
+                        </p>
+                        {familyTransitError ? (
+                          <p className={styles.inlineError}>{familyTransitError}</p>
+                        ) : familyTransitLoading || !familyTransitSnapshot ? (
+                          <p className={styles.inlineMeta}>கோசார நிலை ஏற்றப்படுகிறது…</p>
+                        ) : (
+                          <SouthIndianChart
+                            planetsByRasi={positionsToPlanetsByRasi(
+                              familyTransitSnapshot.positions
+                            )}
+                            ascendantRasi={form.result.birth.ascendantRasi}
+                            highlightedRasis={
+                              moonRasiFromPlanets(form.result.natalPlanets) != null
+                                ? [moonRasiFromPlanets(form.result.natalPlanets) as number]
+                                : []
+                            }
+                            title={familyInsightDate}
+                            theme={theme}
+                          />
+                        )}
+                      </div>
+                      <VimsottariExpander
+                        mahas={form.result.vimsottari.mahadasha}
+                        bhukti={form.result.vimsottari.bhukti}
+                        antara={form.result.vimsottari.antara}
+                        sookshma={form.result.vimsottari.sookshma}
+                        labels={form.result.vimsottari.labelsTa}
+                        dark={dark}
+                      />
+                    </div>
+                  ) : (
+                    <p className={styles.inlineMeta}>
+                      Compute this profile to see the kundli and Vimshottari section.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </section>
         </div>
       )}

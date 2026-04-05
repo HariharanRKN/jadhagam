@@ -332,10 +332,20 @@ def fetch_positions(path: Path, target_day: date) -> dict[str, object]:
         "SELECT * FROM planet_positions WHERE date_ist = ?",
         (target_day.isoformat(),),
     ).fetchone()
-    if row is None:
-        raise ValueError(f"No snapshot found for {target_day.isoformat()}")
     metadata = dict(conn.execute("SELECT key, value FROM metadata").fetchall())
     conn.close()
+    if row is None:
+        snapshot = compute_snapshot(target_day)
+        return {
+            "dateIst": snapshot.date_ist,
+            "timestampIst": snapshot.ts_ist,
+            "timestampUtc": snapshot.ts_utc,
+            "positions": snapshot.positions,
+            "metadata": {
+                **metadata,
+                "resolved_from": "computed_live",
+            },
+        }
 
     positions = {}
     for pid in PLANET_IDS:

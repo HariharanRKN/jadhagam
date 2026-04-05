@@ -14,11 +14,13 @@ import {
 export function SouthIndianChart({
   planetsByRasi: planetsInput,
   ascendantRasi,
+  highlightedRasis = [],
   title = "ராசி",
   onRasiClick,
   theme = "light",
 }: SouthIndianChartProps) {
   const planetsByRasi = normalizePlanetsByRasi(planetsInput);
+  const highlighted = new Set(highlightedRasis);
 
   const handleCellClick = (rasi: number) => {
     if (onRasiClick) {
@@ -40,7 +42,7 @@ export function SouthIndianChart({
               key={rasi}
               role="button"
               tabIndex={0}
-              className={`${styles.cell} ${rasi === ascendantRasi ? styles.cellAscendant : ""}`}
+              className={`${styles.cell} ${rasi === ascendantRasi ? styles.cellAscendant : ""} ${highlighted.has(rasi) ? styles.cellHighlighted : ""}`}
               style={{ gridRow: row, gridColumn: col }}
               onClick={() => handleCellClick(rasi)}
               onKeyDown={(e) => {
@@ -51,6 +53,9 @@ export function SouthIndianChart({
               }}
             >
               <span className={styles.rasiLabel}>{RASI_TAMIL[rasi]}</span>
+              {highlighted.has(rasi) ? (
+                <span className={styles.highlightBadge}>சந்</span>
+              ) : null}
               <div className={styles.planets}>
                 {planets.map((name, idx) => (
                   <span

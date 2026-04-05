@@ -262,7 +262,9 @@
 }
 
 .dateField input,
-.fieldBlock select {
+.dateField input,
+.fieldBlock select,
+.fieldBlock input {
   border: 1px solid #cbd5e1;
   background: #ffffff;
   color: inherit;
@@ -276,7 +278,8 @@
 }
 
 .page.dark .dateField input,
-.page.dark .fieldBlock select {
+.page.dark .fieldBlock select,
+.page.dark .fieldBlock input {
   border-color: #475569;
   background: #0f172a;
   color: #e2e8f0;
@@ -360,6 +363,87 @@
   gap: 1rem;
 }
 
+.familyWrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.familyGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.familyCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.page.dark .familyCard {
+  border-color: #334155;
+  background: #020617;
+}
+
+.familyCard h3 {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+}
+
+.familyFields {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.familyResultStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.familyDateBar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.familyModule {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1rem;
+}
+
+.page.dark .familyModule {
+  border-color: #334155;
+}
+
+.familyModule h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.timelineList {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.timelineRow {
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.82rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(15, 118, 110, 0.06);
+}
+
+.page.dark .timelineRow {
+  background: rgba(20, 184, 166, 0.12);
+}
+
 .tableWrapCustom {
   overflow-x: auto;
 }
@@ -397,8 +481,14 @@
 @media (max-width: 900px) {
   .trackerGrid,
   .resultGrid,
-  .searchControls {
+  .searchControls,
+  .familyGrid {
     grid-template-columns: 1fr;
+  }
+
+  .familyDateBar {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .computeBox {

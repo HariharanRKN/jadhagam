@@ -76,6 +76,7 @@ export function getPlanetsInRasi(
 export interface SouthIndianChartProps {
   planetsByRasi: PlanetsByRasiInput;
   ascendantRasi: number;
+  highlightedRasis?: number[];
   title?: string;
   onRasiClick?: (rasi: number) => void;
   theme?: "light" | "dark";
