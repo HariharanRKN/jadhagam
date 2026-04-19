@@ -1,6 +1,8 @@
 /**
  * South Indian Rasi chart: fixed cell positions (0-based rasi index, matching PyJHora / horoscope.py).
  */
+import type { LanguageCode } from "@/components/LanguageProvider";
+
 export type RasiCell = { rasi: number; row: number; col: number };
 
 export const RASI_GRID: RasiCell[] = [
@@ -33,6 +35,21 @@ export const RASI_TAMIL: Record<number, string> = {
   11: "மீனம்",
 };
 
+export const RASI_EN: Record<number, string> = {
+  0: "Aries",
+  1: "Taurus",
+  2: "Gemini",
+  3: "Cancer",
+  4: "Leo",
+  5: "Virgo",
+  6: "Libra",
+  7: "Scorpio",
+  8: "Sagittarius",
+  9: "Capricorn",
+  10: "Aquarius",
+  11: "Pisces",
+};
+
 export const PLANET_TAMIL: Record<string, string> = {
   Sun: "சூ",
   Moon: "சந்",
@@ -44,6 +61,48 @@ export const PLANET_TAMIL: Record<string, string> = {
   Rahu: "ரா",
   Ketu: "கே",
 };
+
+const PLANET_EN_ABBR: Record<string, string> = {
+  Sun: "Su",
+  Moon: "Mo",
+  Mars: "Ma",
+  Mercury: "Me",
+  Jupiter: "Ju",
+  Venus: "Ve",
+  Saturn: "Sa",
+  Rahu: "Ra",
+  Ketu: "Ke",
+};
+
+const PLANET_TA_FULL: Record<string, string> = {
+  Sun: "சூரியன்",
+  Moon: "சந்திரன்",
+  Mars: "செவ்வாய்",
+  Mercury: "புதன்",
+  Jupiter: "குரு",
+  Venus: "சுக்கிரன்",
+  Saturn: "சனி",
+  Rahu: "ராகு",
+  Ketu: "கேது",
+};
+
+export function getRasiCellLabel(lang: LanguageCode, rasi: number): string {
+  return lang === "ta" ? RASI_TAMIL[rasi] : RASI_EN[rasi];
+}
+
+export function getPlanetChipLabel(lang: LanguageCode, englishName: string): string {
+  if (lang === "ta") {
+    return PLANET_TAMIL[englishName] ?? englishName.slice(0, 2);
+  }
+  return PLANET_EN_ABBR[englishName] ?? englishName.slice(0, 2);
+}
+
+export function getPlanetTooltipLabel(lang: LanguageCode, englishName: string): string {
+  if (lang === "ta") {
+    return PLANET_TA_FULL[englishName] ?? englishName;
+  }
+  return englishName;
+}
 
 /** Normalize JSON string keys to numeric rasi indices. */
 export type PlanetsByRasiInput = Record<number, string[]> | Record<string, string[]>;
@@ -80,4 +139,6 @@ export interface SouthIndianChartProps {
   title?: string;
   onRasiClick?: (rasi: number) => void;
   theme?: "light" | "dark";
+  /** Defaults from LanguageProvider when omitted (client only). */
+  language?: LanguageCode;
 }

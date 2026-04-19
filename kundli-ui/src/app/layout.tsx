@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { DocumentTitle } from "@/components/DocumentTitle";
+import { LanguageProvider } from "@/components/LanguageProvider";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,8 +15,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <LanguageProvider>
+          <DocumentTitle />
+          <div className="appShell">
+            <div className="appTopbar">
+              <LanguageToggle />
+            </div>
+            {children}
+          </div>
+        </LanguageProvider>
+      </body>
     </html>
   );
 }

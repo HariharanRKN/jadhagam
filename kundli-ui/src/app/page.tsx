@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { LanguageCode } from "@/components/LanguageProvider";
 import { SouthIndianChart } from "@/components/SouthIndianChart/SouthIndianChart";
 import { BirthInputForm } from "@/components/BirthInputForm";
 import { PlacePhotonField } from "@/components/PlacePhotonField";
 import { PlanetaryTableTamil } from "@/components/tables/PlanetaryTableTamil";
 import { DashaBhuktiTableTamil } from "@/components/tables/DashaBhuktiTableTamil";
 import { VimsottariExpander } from "@/components/tables/VimsottariExpander";
+import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
+import { getMessage, interpolate, useTranslations } from "@/i18n/useTranslations";
 import type { AntaraRow, ChartDataPayload } from "@/types/chartData";
 import styles from "./page.module.css";
 
@@ -82,65 +85,32 @@ type FamilyFormState = {
   result: ChartDataPayload | null;
 };
 
-const RASI_OPTIONS = [
-  { value: "mesha", label: "மேஷம்" },
-  { value: "rishabha", label: "ரிஷபம்" },
-  { value: "mithuna", label: "மிதுனம்" },
-  { value: "karkata", label: "கடகம்" },
-  { value: "simha", label: "சிம்மம்" },
-  { value: "kanya", label: "கன்னி" },
-  { value: "tula", label: "துலாம்" },
-  { value: "vrischika", label: "விருச்சிகம்" },
-  { value: "dhanu", label: "தனுசு" },
-  { value: "makara", label: "மகரம்" },
-  { value: "kumbha", label: "கும்பம்" },
-  { value: "meena", label: "மீனம்" },
+const RASI_ORDER = [
+  "mesha",
+  "rishabha",
+  "mithuna",
+  "karkata",
+  "simha",
+  "kanya",
+  "tula",
+  "vrischika",
+  "dhanu",
+  "makara",
+  "kumbha",
+  "meena",
 ] as const;
 
-const PLANET_OPTIONS = [
-  { value: "sun", label: "சூரியன்" },
-  { value: "moon", label: "சந்திரன்" },
-  { value: "mars", label: "செவ்வாய்" },
-  { value: "mercury", label: "புதன்" },
-  { value: "guru", label: "குரு" },
-  { value: "sukra", label: "சுக்கிரன்" },
-  { value: "saturn", label: "சனி" },
-  { value: "rahu", label: "ராகு" },
-  { value: "ketu", label: "கேது" },
+const PLANET_ORDER = [
+  { value: "sun", id: 0 },
+  { value: "moon", id: 1 },
+  { value: "mars", id: 2 },
+  { value: "mercury", id: 3 },
+  { value: "guru", id: 4 },
+  { value: "sukra", id: 5 },
+  { value: "saturn", id: 6 },
+  { value: "rahu", id: 7 },
+  { value: "ketu", id: 8 },
 ] as const;
-
-const RASI_TAMIL = [
-  "மேஷம்",
-  "ரிஷபம்",
-  "மிதுனம்",
-  "கடகம்",
-  "சிம்மம்",
-  "கன்னி",
-  "துலாம்",
-  "விருச்சிகம்",
-  "தனுசு",
-  "மகரம்",
-  "கும்பம்",
-  "மீனம்",
-];
-
-const HOUSE_LABEL_TAMIL: Record<3 | 7 | 11, string> = {
-  3: "3ஆம் பாவம்",
-  7: "7ஆம் பாவம்",
-  11: "11ஆம் பாவம்",
-};
-
-const LORD_TAMIL: Record<number, string> = {
-  0: "சூரியன்",
-  1: "சந்திரன்",
-  2: "செவ்வாய்",
-  3: "புதன்",
-  4: "குரு",
-  5: "சுக்கிரன்",
-  6: "சனி",
-  7: "ராகு",
-  8: "கேது",
-};
 
 const SIGN_LORD: Record<number, number> = {
   0: 2,
@@ -227,22 +197,20 @@ function sameLordSequence(
   return null;
 }
 
-function formatTamilPlanetList(values: string[]) {
-  return values.length ? values.join(", ") : "இல்லை";
+function formatPlanetList(values: string[], noneLabel: string) {
+  return values.length ? values.join(", ") : noneLabel;
 }
 
-function permutationLabelForRow(
-  houseOrder: [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11],
-  row: AntaraRow
-) {
-  return `${LORD_TAMIL[row.maha]} / ${LORD_TAMIL[row.bhukti]} / ${LORD_TAMIL[row.lord]}`;
+function permutationLabelForRow(lang: LanguageCode, row: AntaraRow) {
+  return `${lordName(lang, row.maha)} / ${lordName(lang, row.bhukti)} / ${lordName(lang, row.lord)}`;
 }
 
 function buildPermutationLabelFromLords(
+  lang: LanguageCode,
   houseOrder: [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11],
   houseToLord: Record<3 | 7 | 11, number>
 ) {
-  return houseOrder.map((house) => LORD_TAMIL[houseToLord[house]]).join(" / ");
+  return houseOrder.map((house) => lordName(lang, houseToLord[house])).join(" / ");
 }
 
 function parseDatePart(value: string) {
@@ -316,6 +284,7 @@ function createFamilyFormState(index: number): FamilyFormState {
 }
 
 export default function Home() {
+  const { language, t, interpolate: ti } = useTranslations();
   const [dark, setDark] = useState(false);
   const [data, setData] = useState<ChartDataPayload | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -351,8 +320,30 @@ export default function Home() {
 
   const theme = dark ? "dark" : "light";
 
+  const rasiOptions = useMemo(
+    () =>
+      RASI_ORDER.map((value, index) => ({
+        value,
+        label: rasiName(language, index),
+      })),
+    [language]
+  );
+
+  const planetOptions = useMemo(
+    () =>
+      PLANET_ORDER.map(({ value, id }) => ({
+        value,
+        label: lordName(language, id),
+      })),
+    [language]
+  );
+
   const marriageDerived = useMemo(() => {
     if (!data) return null;
+
+    const gt = (path: string) => getMessage(language, path);
+    const interp = (path: string, vars: Record<string, string | number>) =>
+      interpolate(gt(path), vars);
 
     const ascendant = data.birth.ascendantRasi;
     const targetHouses: [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11] = [3, 7, 11];
@@ -362,7 +353,9 @@ export default function Home() {
       const lordId = SIGN_LORD[rasi];
       const occupants = data.natalPlanets
         .filter((planet) => houseFromRasi(ascendant, planet.rasi) === houseNumber)
-        .map((planet) => planet.planetTa);
+        .map((planet) =>
+          language === "ta" ? planet.planetTa : planet.planetEn
+        );
       const aspectors = data.natalPlanets
         .filter((planet) =>
           grahaDrishtiTargets(
@@ -370,13 +363,15 @@ export default function Home() {
             houseFromRasi(ascendant, planet.rasi)
           ).includes(houseNumber)
         )
-        .map((planet) => planet.planetTa);
+        .map((planet) =>
+          language === "ta" ? planet.planetTa : planet.planetEn
+        );
       return {
         houseNumber,
         rasi,
         occupants,
         lordId,
-        lordName: LORD_TAMIL[lordId],
+        lordName: lordName(language, lordId),
         aspectors,
       };
     });
@@ -401,39 +396,55 @@ export default function Home() {
         const houseNumber = houseFromRasi(ascendant, row.rasi);
         const notes: string[] = [];
         if (targetHouses.includes(houseNumber as 3 | 7 | 11)) {
-          notes.push(`${HOUSE_LABEL_TAMIL[houseNumber as 3 | 7 | 11]}-இல் இருப்பு`);
+          notes.push(
+            interp("home.marriageNotePlacement", {
+              house: houseOrdinal(language, houseNumber),
+            })
+          );
         }
         const aspected = targetHouses.filter((houseNumberItem) =>
           grahaDrishtiTargets(planetId, houseNumber).includes(houseNumberItem)
         );
         if (aspected.length) {
           notes.push(
-            `${aspected.map((item) => HOUSE_LABEL_TAMIL[item]).join(", ")} மீது பார்வை`
+            interp("home.marriageNoteAspect", {
+              houses: aspected
+                .map((item) => houseOrdinal(language, item))
+                .join(language === "en" ? ", " : ", "),
+            })
           );
         }
         const lordOf = analysisRows
           .filter((analysis) => analysis.lordId === planetId)
-          .map((analysis) => HOUSE_LABEL_TAMIL[analysis.houseNumber]);
+          .map((analysis) => houseOrdinal(language, analysis.houseNumber));
         if (lordOf.length) {
-          notes.push(`${lordOf.join(", ")} அதிபதி`);
+          notes.push(
+            interp("home.marriageNoteLord", {
+              houses: lordOf.join(language === "en" ? ", " : ", "),
+            })
+          );
         }
         const conjunctTargetLords = targetLordPlanetRows
           .filter(
             (planet) =>
               planet.planetId !== planetId && planet.rasi === row.rasi
           )
-          .map((planet) => planet.planetTa);
+          .map((planet) =>
+            language === "ta" ? planet.planetTa : planet.planetEn
+          );
         if (conjunctTargetLords.length) {
           notes.push(
-            `இதே ராசியில் இணைவு: ${conjunctTargetLords.join(", ")}`
+            interp("home.marriageNoteConjunct", {
+              planets: conjunctTargetLords.join(", "),
+            })
           );
         }
         if (!notes.length) {
-          notes.push("3, 7, 11 பாவங்களுடன் நேரடி இணைவு இல்லை");
+          notes.push(gt("home.marriageNoteNoDirect"));
         }
         return {
           planetId,
-          label: row.planetTa,
+          label: language === "ta" ? row.planetTa : row.planetEn,
           houseNumber,
           rasi: row.rasi,
           notes,
@@ -450,7 +461,7 @@ export default function Home() {
         return {
           ...row,
           houseOrder,
-          permutationLabel: permutationLabelForRow(houseOrder, row),
+          permutationLabel: permutationLabelForRow(language, row),
         };
       })
       .filter((row): row is MarriageTimingRow => row !== null)
@@ -468,6 +479,7 @@ export default function Home() {
     const permutationStatusRows: MarriagePermutationStatusRow[] =
       allPermutationOrders.map((houseOrder) => {
         const permutationLabel = buildPermutationLabelFromLords(
+          language,
           houseOrder,
           houseToLord
         );
@@ -492,7 +504,7 @@ export default function Home() {
       timingRows,
       permutationStatusRows,
     };
-  }, [data, todayIso]);
+  }, [data, todayIso, language]);
 
   useEffect(() => {
     setTodayIso(new Date().toISOString().slice(0, 10));
@@ -685,7 +697,9 @@ export default function Home() {
       );
       setSearchSnapshots(snapshots);
     } catch (err) {
-      setSearchError(err instanceof Error ? err.message : "Search failed");
+      setSearchError(
+        err instanceof Error ? err.message : t("home.searchFailed")
+      );
     } finally {
       setSearchLoading(false);
     }
@@ -743,7 +757,7 @@ export default function Home() {
       setFamilyForms((current) =>
         current.map((item, itemIndex) =>
           itemIndex === index
-            ? { ...item, error: "Enter valid birth, place, latitude, and longitude values." }
+            ? { ...item, error: t("home.familyValidationError") }
             : item
         )
       );
@@ -766,7 +780,7 @@ export default function Home() {
       );
       const tzJson = (await tzRes.json()) as { offsetHours?: number; error?: string };
       if (!tzRes.ok || typeof tzJson.offsetHours !== "number") {
-        throw new Error(tzJson.error || "Timezone lookup failed");
+        throw new Error(tzJson.error || t("home.timezoneFailed"));
       }
 
       const payload: Record<string, unknown> = {
@@ -817,7 +831,8 @@ export default function Home() {
             ? {
                 ...item,
                 loading: false,
-                error: error instanceof Error ? error.message : "Could not compute chart",
+                error:
+                  error instanceof Error ? error.message : t("home.familyChartError"),
               }
             : item
         )
@@ -829,13 +844,15 @@ export default function Home() {
     <div className={`${styles.page} ${dark ? styles.dark : ""}`}>
       <header className={styles.header}>
         <div className={styles.titleBlock}>
-          <h1>South Indian Rasi chart</h1>
+          <h1>{t("home.headerTitle")}</h1>
           <p>
-            0-based rasi keys and English planet names match{" "}
-            <code>horoscope.py</code> / PyJHora. Initial data loads from{" "}
-            <code>public/chart-data.json</code>; use the form below to recompute
-            via the local <code>/api/horoscope</code> endpoint (requires Python 3
-            + PyJHora on the machine running Next.js).
+            {t("home.headerIntroA")}
+            <code>horoscope.py</code>
+            {t("home.headerIntroB")}
+            <code>public/chart-data.json</code>
+            {t("home.headerIntroC")}
+            <code>/api/horoscope</code>
+            {t("home.headerIntroD")}
           </p>
           {data?.meta && (
             <p className={styles.metaLine}>
@@ -850,7 +867,7 @@ export default function Home() {
               {data.meta.dob} · {data.meta.tob} · {data.meta.place} ·{" "}
               {data.meta.ayanamsa}
               {data.transit.computedAt
-                ? ` · transit computed ${data.transit.computedAt}`
+                ? ` · ${t("home.transitComputed")} ${data.transit.computedAt}`
                 : null}
             </p>
           )}
@@ -860,7 +877,7 @@ export default function Home() {
           className={styles.themeToggle}
           onClick={() => setDark((d) => !d)}
         >
-          {dark ? "Light mode" : "Dark mode"}
+          {dark ? t("home.themeLight") : t("home.themeDark")}
         </button>
       </header>
 
@@ -879,28 +896,28 @@ export default function Home() {
           className={`${styles.tabBtn} ${activeTab === "kundli" ? styles.tabBtnActive : ""}`}
           onClick={() => setActiveTab("kundli")}
         >
-          ஜாதகம்
+          {t("home.tabKundli")}
         </button>
         <button
           type="button"
           className={`${styles.tabBtn} ${activeTab === "kochar" ? styles.tabBtnActive : ""}`}
           onClick={() => setActiveTab("kochar")}
         >
-          கோசார கண்காணிப்பு
+          {t("home.tabKochar")}
         </button>
         <button
           type="button"
           className={`${styles.tabBtn} ${activeTab === "marriage" ? styles.tabBtnActive : ""}`}
           onClick={() => setActiveTab("marriage")}
         >
-          திருமணம்
+          {t("home.tabMarriage")}
         </button>
         <button
           type="button"
           className={`${styles.tabBtn} ${activeTab === "family" ? styles.tabBtnActive : ""}`}
           onClick={() => setActiveTab("family")}
         >
-          Family
+          {t("home.tabFamily")}
         </button>
       </div>
 
@@ -912,9 +929,7 @@ export default function Home() {
 
       {loadError && (
         <p className={styles.loadError}>
-          Could not load chart data: {loadError}. Place{" "}
-          <code>chart-data.json</code> in <code>public/</code> or run the Python
-          exporter.
+          {t("home.loadErrorPrefix")} {loadError}. {t("home.loadErrorSuffix")}
         </p>
       )}
 
@@ -922,20 +937,20 @@ export default function Home() {
         <>
           <div className={styles.charts}>
             <section className={styles.chartBlock}>
-              <h2>Birth chart</h2>
+              <h2>{t("home.chartBirth")}</h2>
               <SouthIndianChart
                 planetsByRasi={data.birth.planetsByRasi}
                 ascendantRasi={data.birth.ascendantRasi}
-                title="ஜனன குண்டலி"
+                title={t("home.chartTitleBirth")}
                 theme={theme}
               />
             </section>
             <section className={styles.chartBlock}>
-              <h2>Transit (gochara)</h2>
+              <h2>{t("home.chartTransit")}</h2>
               <SouthIndianChart
                 planetsByRasi={data.transit.planetsByRasi}
                 ascendantRasi={data.transit.ascendantRasi}
-                title="கோசார நிலை"
+                title={t("home.chartTitleTransit")}
                 theme={theme}
               />
             </section>
@@ -967,32 +982,32 @@ export default function Home() {
         <div className={styles.trackerWrap}>
           <section className={styles.trackerSection}>
             <div className={styles.sectionHeader}>
-              <h2>பகுதி 1</h2>
-              <p>இன்றைய கோசார நிலையும் தேர்ந்தெடுத்த தேதியின் நிலையும் ஒப்பிடலாம்.</p>
+              <h2>{t("home.kocharPart1Title")}</h2>
+              <p>{t("home.kocharPart1Desc")}</p>
             </div>
             <div className={styles.trackerGrid}>
               <div className={styles.trackerPane}>
                 <div className={styles.paneHead}>
-                  <h3>தற்போதைய கிரக நிலை</h3>
+                  <h3>{t("home.currentPositions")}</h3>
                   <p>
                     {data.transit.computedAt
-                      ? `${data.transit.computedAt} நேர நிலை`
-                      : "தற்போதைய கோசார தரவு"}
+                      ? `${data.transit.computedAt} ${t("home.transitAt")}`
+                      : t("home.currentTransitData")}
                   </p>
                 </div>
                 <SouthIndianChart
                   planetsByRasi={data.transit.planetsByRasi}
                   ascendantRasi={data.transit.ascendantRasi}
-                  title="கோசார நிலை"
+                  title={t("home.chartTitleTransit")}
                   theme={theme}
                 />
               </div>
 
               <div className={styles.trackerPane}>
                 <div className={styles.paneHead}>
-                  <h3>தேர்ந்தெடுத்த தேதியின் கிரக நிலை</h3>
+                  <h3>{t("home.selectedDatePositions")}</h3>
                   <label className={styles.dateField}>
-                    <span>தேதி</span>
+                    <span>{t("home.dateLabel")}</span>
                     <input
                       type="date"
                       value={trackerDate}
@@ -1005,11 +1020,11 @@ export default function Home() {
                 {trackerError ? (
                   <p className={styles.inlineError}>{trackerError}</p>
                 ) : trackerLoading ? (
-                  <p className={styles.inlineMeta}>ஜாதகம் ஏற்றப்படுகிறது…</p>
+                  <p className={styles.inlineMeta}>{t("home.loadingChart")}</p>
                 ) : trackerSnapshot ? (
                   <>
                     <p className={styles.inlineMeta}>
-                      எடுத்த நேரம்: {trackerSnapshot.timestampIst}
+                      {t("home.snapshotTime")} {trackerSnapshot.timestampIst}
                     </p>
                     <SouthIndianChart
                       planetsByRasi={positionsToPlanetsByRasi(
@@ -1027,13 +1042,13 @@ export default function Home() {
 
           <section className={styles.trackerSection}>
             <div className={styles.sectionHeader}>
-              <h2>பகுதி 2</h2>
-              <p>தேர்ந்தெடுத்த கிரகங்கள் ஒரு ராசியில் சேர்ந்த நாட்களைத் தேடலாம்.</p>
+              <h2>{t("home.kocharPart2Title")}</h2>
+              <p>{t("home.kocharPart2Desc")}</p>
             </div>
 
             <div className={styles.searchControls}>
               <label className={styles.fieldBlock}>
-                <span>கிரகங்கள்</span>
+                <span>{t("home.planetsLabel")}</span>
                 <select
                   multiple
                   value={selectedPlanets}
@@ -1043,7 +1058,7 @@ export default function Home() {
                     )
                   }
                 >
-                  {PLANET_OPTIONS.map((option) => (
+                  {planetOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -1052,13 +1067,13 @@ export default function Home() {
               </label>
 
               <label className={styles.fieldBlock}>
-                <span>ராசி</span>
+                <span>{t("home.signLabel")}</span>
                 <select
                   value={selectedRasi}
                   onChange={(e) => setSelectedRasi(e.target.value)}
                 >
-                  <option value="">ராசியைத் தேர்வு செய்க</option>
-                  {RASI_OPTIONS.map((option) => (
+                  <option value="">{t("home.signPlaceholder")}</option>
+                  {rasiOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -1073,7 +1088,7 @@ export default function Home() {
                   disabled={!selectedPlanets.length || !selectedRasi || searchLoading}
                   onClick={() => void handleSearch()}
                 >
-                  {searchLoading ? "கணக்கிடுகிறது…" : "கணக்கிடு"}
+                  {searchLoading ? t("home.computing") : t("home.compute")}
                 </button>
               </div>
             </div>
@@ -1085,7 +1100,10 @@ export default function Home() {
             {searchResult ? (
               <div className={styles.searchSummary}>
                 <p className={styles.inlineMeta}>
-                  1960-01-01 முதல் {todayIso} வரை {searchResult.matchCount} தின பொருத்தங்கள் கிடைத்துள்ளன.
+                  {ti("home.matchesSummary", {
+                    end: todayIso,
+                    count: searchResult.matchCount,
+                  })}
                 </p>
                 {searchResult.ranges.length > 0 ? (
                   <div className={styles.rangeList}>
@@ -1094,7 +1112,10 @@ export default function Home() {
                         key={`${range.startDateIst}-${range.endDateIst}`}
                         className={styles.rangeChip}
                       >
-                        {range.startDateIst} முதல் {range.endDateIst}
+                        {ti("home.rangeFromTo", {
+                          start: range.startDateIst,
+                          end: range.endDateIst,
+                        })}
                       </span>
                     ))}
                   </div>
@@ -1126,29 +1147,33 @@ export default function Home() {
         <div className={styles.trackerWrap}>
           <section className={styles.trackerSection}>
             <div className={styles.sectionHeader}>
-              <h2>பிறப்பு ஜாதக ஆய்வு</h2>
-              <p>3, 7, 11 பாவங்களில் உள்ள கிரகங்கள், பார்வைகள் மற்றும் அதிபதிகள்.</p>
+              <h2>{t("home.marriageBirthTitle")}</h2>
+              <p>{t("home.marriageBirthDesc")}</p>
             </div>
 
             <div className={styles.tableWrapCustom}>
               <table className={styles.analysisTable}>
                 <thead>
                   <tr>
-                    <th>பாவம்</th>
-                    <th>ராசி</th>
-                    <th>அந்த பாவத்தில் உள்ள கிரகங்கள்</th>
-                    <th>அதிபதி</th>
-                    <th>பார்க்கும் கிரகங்கள்</th>
+                    <th>{t("home.thHouse")}</th>
+                    <th>{t("home.thSign")}</th>
+                    <th>{t("home.thOccupants")}</th>
+                    <th>{t("home.thLord")}</th>
+                    <th>{t("home.thAspectors")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {marriageDerived.analysisRows.map((row) => (
                     <tr key={row.houseNumber}>
-                      <td>{HOUSE_LABEL_TAMIL[row.houseNumber]}</td>
-                      <td>{RASI_TAMIL[row.rasi]}</td>
-                      <td>{formatTamilPlanetList(row.occupants)}</td>
+                      <td>{houseOrdinal(language, row.houseNumber)}</td>
+                      <td>{rasiName(language, row.rasi)}</td>
+                      <td>
+                        {formatPlanetList(row.occupants, t("home.noneList"))}
+                      </td>
                       <td>{row.lordName}</td>
-                      <td>{formatTamilPlanetList(row.aspectors)}</td>
+                      <td>
+                        {formatPlanetList(row.aspectors, t("home.noneList"))}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1156,26 +1181,26 @@ export default function Home() {
             </div>
 
             <div className={styles.sectionHeader} style={{ marginTop: "1.25rem" }}>
-              <h2>குரு மற்றும் சுக்கிரன் நிலை</h2>
-              <p>இருவரின் இருப்பு, பார்வை மற்றும் 3, 7, 11 பாவங்களுடனான தொடர்பு.</p>
+              <h2>{t("home.guruShukraTitle")}</h2>
+              <p>{t("home.guruShukraDesc")}</p>
             </div>
 
             <div className={styles.tableWrapCustom}>
               <table className={styles.analysisTable}>
                 <thead>
                   <tr>
-                    <th>கிரகம்</th>
-                    <th>ராசி</th>
-                    <th>பாவம்</th>
-                    <th>குறிப்புகள்</th>
+                    <th>{t("home.thPlanet")}</th>
+                    <th>{t("home.thSign")}</th>
+                    <th>{t("home.thHouse")}</th>
+                    <th>{t("home.thNotes")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {marriageDerived.guruSukraRows.map((row) => (
                     <tr key={row.planetId}>
                       <td>{row.label}</td>
-                      <td>{RASI_TAMIL[row.rasi]}</td>
-                      <td>{row.houseNumber}ஆம் பாவம்</td>
+                      <td>{rasiName(language, row.rasi)}</td>
+                      <td>{houseOrdinal(language, row.houseNumber)}</td>
                       <td>{row.notes.join(" · ")}</td>
                     </tr>
                   ))}
@@ -1186,19 +1211,19 @@ export default function Home() {
 
           <section className={styles.trackerSection}>
             <div className={styles.sectionHeader}>
-              <h2>Permutation நிலை</h2>
-              <p>3, 7, 11 பாவ அதிபதிகளின் 6 permutation-களும் நடந்ததா இல்லையா என்பதை காட்டும் அட்டவணை.</p>
+              <h2>{t("home.permutationStatusTitle")}</h2>
+              <p>{t("home.permutationStatusDesc")}</p>
             </div>
 
             <div className={styles.tableWrapCustom}>
               <table className={styles.analysisTable}>
                 <thead>
                   <tr>
-                    <th>Permutation</th>
-                    <th>பாவ வரிசை</th>
-                    <th>நிலை</th>
-                    <th>தொடக்கம்</th>
-                    <th>முடிவு</th>
+                    <th>{t("home.thPermutation")}</th>
+                    <th>{t("home.thHouseOrder")}</th>
+                    <th>{t("home.thStatus")}</th>
+                    <th>{t("home.thStart")}</th>
+                    <th>{t("home.thEnd")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1207,10 +1232,14 @@ export default function Home() {
                       <td>{row.permutationLabel}</td>
                       <td>
                         {row.houseOrder
-                          .map((houseNumber) => HOUSE_LABEL_TAMIL[houseNumber])
+                          .map((houseNumber) => houseOrdinal(language, houseNumber))
                           .join(" → ")}
                       </td>
-                      <td>{row.occurred ? "நடைந்துள்ளது" : "இன்னும் வரவில்லை"}</td>
+                      <td>
+                        {row.occurred
+                          ? t("home.statusOccurred")
+                          : t("home.statusNotYet")}
+                      </td>
                       <td>{row.firstMatch ? row.firstMatch.start : "—"}</td>
                       <td>{row.firstMatch?.end ?? "—"}</td>
                     </tr>
@@ -1222,24 +1251,21 @@ export default function Home() {
 
           <section className={styles.trackerSection}>
             <div className={styles.sectionHeader}>
-              <h2>தசை - புக்தி - அந்தரம் காலங்கள்</h2>
-              <p>
-                3, 7, 11 பாவ அதிபதிகள் மூன்றும் தசை, புக்தி, அந்தரம் வரிசையில் மாற்றி மாற்றி
-                வந்த காலங்கள்.
-              </p>
+              <h2>{t("home.dashaPeriodsTitle")}</h2>
+              <p>{t("home.dashaPeriodsDesc")}</p>
             </div>
 
             <div className={styles.tableWrapCustom}>
               <table className={styles.analysisTable}>
                 <thead>
                   <tr>
-                    <th>Permutation</th>
-                    <th>தசை</th>
-                    <th>புக்தி</th>
-                    <th>அந்தரம்</th>
-                    <th>பாவ வரிசை</th>
-                    <th>தொடக்கம்</th>
-                    <th>முடிவு</th>
+                    <th>{t("home.thPermutation")}</th>
+                    <th>{t("home.mahadasha")}</th>
+                    <th>{t("home.bhukti")}</th>
+                    <th>{t("home.antara")}</th>
+                    <th>{t("home.thHouseOrder")}</th>
+                    <th>{t("home.thStart")}</th>
+                    <th>{t("home.thEnd")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1247,12 +1273,12 @@ export default function Home() {
                     marriageDerived.timingRows.map((row, index) => (
                       <tr key={`${row.start}-${index}`}>
                         <td>{row.permutationLabel}</td>
-                        <td>{LORD_TAMIL[row.maha]}</td>
-                        <td>{LORD_TAMIL[row.bhukti]}</td>
-                        <td>{LORD_TAMIL[row.lord]}</td>
+                        <td>{lordName(language, row.maha)}</td>
+                        <td>{lordName(language, row.bhukti)}</td>
+                        <td>{lordName(language, row.lord)}</td>
                         <td>
                           {row.houseOrder
-                            .map((houseNumber) => HOUSE_LABEL_TAMIL[houseNumber])
+                            .map((houseNumber) => houseOrdinal(language, houseNumber))
                             .join(" → ")}
                         </td>
                         <td>{row.start}</td>
@@ -1261,7 +1287,7 @@ export default function Home() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7}>இத்தகைய காலங்கள் இதுவரை இல்லை.</td>
+                      <td colSpan={7}>{t("home.noSuchPeriods")}</td>
                     </tr>
                   )}
                 </tbody>
@@ -1271,11 +1297,11 @@ export default function Home() {
 
           <section className={styles.trackerSection}>
             <div className={styles.sectionHeader}>
-              <h2>கால தொடக்க ஜாதகங்கள்</h2>
-              <p>ஒவ்வொரு பொருந்தும் காலத்தின் முதல் நாளுக்கான கோசார ஜாதகம். அதிகபட்சம் 10 மட்டும்.</p>
+              <h2>{t("home.snapshotChartsTitle")}</h2>
+              <p>{t("home.snapshotChartsDesc")}</p>
             </div>
             {marriageLoading ? (
-              <p className={styles.inlineMeta}>ஜாதகங்கள் ஏற்றப்படுகிறது…</p>
+              <p className={styles.inlineMeta}>{t("home.loadingCharts")}</p>
             ) : marriageSnapshots.length > 0 ? (
               <div className={styles.resultGrid}>
                 {marriageSnapshots.map((snapshot, index) => (
@@ -1292,7 +1318,7 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <p className={styles.inlineMeta}>காட்ட ஜாதகம் எதுவும் இல்லை.</p>
+              <p className={styles.inlineMeta}>{t("home.noChartsToShow")}</p>
             )}
           </section>
         </div>
@@ -1302,16 +1328,16 @@ export default function Home() {
         <div className={styles.familyWrap}>
           <section className={styles.trackerSection}>
             <div className={styles.sectionHeader}>
-              <h2>Family Inputs</h2>
-              <p>Enter up to four birth profiles and compute each kundli independently.</p>
+              <h2>{t("home.familyInputsTitle")}</h2>
+              <p>{t("home.familyInputsDesc")}</p>
             </div>
             <div className={styles.familyGrid}>
               {familyForms.map((form, index) => (
                 <div key={`family-form-${index}`} className={styles.familyCard}>
-                  <h3>Profile {index + 1}</h3>
+                  <h3>{ti("home.profileN", { n: index + 1 })}</h3>
                   <div className={styles.familyFields}>
                     <label className={styles.fieldBlock}>
-                      <span>Name</span>
+                      <span>{t("home.name")}</span>
                       <input
                         type="text"
                         value={form.name}
@@ -1319,7 +1345,7 @@ export default function Home() {
                       />
                     </label>
                     <label className={styles.fieldBlock}>
-                      <span>Birth Date</span>
+                      <span>{t("home.birthDate")}</span>
                       <input
                         type="date"
                         value={form.birthDate}
@@ -1329,7 +1355,7 @@ export default function Home() {
                       />
                     </label>
                     <label className={styles.fieldBlock}>
-                      <span>Birth Time</span>
+                      <span>{t("home.birthTime")}</span>
                       <input
                         type="time"
                         value={form.birthTime}
@@ -1339,7 +1365,7 @@ export default function Home() {
                       />
                     </label>
                     <PlacePhotonField
-                      label="Place Name"
+                      label={t("home.placeName")}
                       className={styles.fieldBlock}
                       syncValue={form.placeName}
                       onPlaceSelected={(detail) =>
@@ -1348,7 +1374,7 @@ export default function Home() {
                       dark={dark}
                     />
                     <label className={styles.fieldBlock}>
-                      <span>Latitude</span>
+                      <span>{t("home.latitude")}</span>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -1357,7 +1383,7 @@ export default function Home() {
                       />
                     </label>
                     <label className={styles.fieldBlock}>
-                      <span>Longitude</span>
+                      <span>{t("home.longitude")}</span>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -1372,7 +1398,7 @@ export default function Home() {
                     disabled={form.loading}
                     onClick={() => void computeFamilyChart(index)}
                   >
-                    {form.loading ? "Computing…" : "Compute"}
+                    {form.loading ? t("home.computingProfile") : t("home.computeProfile")}
                   </button>
                   {form.error ? (
                     <p className={styles.inlineError}>{form.error}</p>
@@ -1384,12 +1410,12 @@ export default function Home() {
 
           <section className={styles.trackerSection}>
             <div className={styles.sectionHeader}>
-              <h2>Family Outputs</h2>
-              <p>Each profile shows the kundli, a date-based dasha snapshot, the matching kochara chart, and the full Vimsottari expander.</p>
+              <h2>{t("home.familyOutputsTitle")}</h2>
+              <p>{t("home.familyOutputsDesc")}</p>
             </div>
             <div className={styles.familyDateBar}>
               <label className={styles.dateField}>
-                <span>Selected Date</span>
+                <span>{t("home.selectedDate")}</span>
                 <input
                   type="date"
                   value={familyInsightDate}
@@ -1397,14 +1423,16 @@ export default function Home() {
                   max={todayIso}
                 />
               </label>
-              <p className={styles.inlineMeta}>
-                This date drives the active dasha/bhukti/antara and kochara view for all four profiles.
-              </p>
+              <p className={styles.inlineMeta}>{t("home.familyDateHint")}</p>
             </div>
             <div className={styles.familyGrid}>
               {familyForms.map((form, index) => (
                 <div key={`family-result-${index}`} className={styles.familyCard}>
-                  <h3>{form.result?.meta.name || form.name || `Profile ${index + 1}`}</h3>
+                  <h3>
+                    {form.result?.meta.name ||
+                      form.name ||
+                      ti("home.profileN", { n: index + 1 })}
+                  </h3>
                   {form.result ? (
                     <div className={styles.familyResultStack}>
                       <div>
@@ -1415,12 +1443,12 @@ export default function Home() {
                         <SouthIndianChart
                           planetsByRasi={form.result.birth.planetsByRasi}
                           ascendantRasi={form.result.birth.ascendantRasi}
-                          title="ஜனன குண்டலி"
+                          title={t("home.chartTitleBirth")}
                           theme={theme}
                         />
                       </div>
                       <div className={styles.familyModule}>
-                        <h4>Date Snapshot</h4>
+                        <h4>{t("home.dateSnapshot")}</h4>
                         {(() => {
                           const currentMaha = latestStartedRow(
                             form.result.vimsottari.mahadasha,
@@ -1439,48 +1467,62 @@ export default function Home() {
                             if (planetId == null) return "—";
                             const houses = housesOwnedByPlanet(ascendant, planetId);
                             return houses.length
-                              ? houses.map((house) => `${house}ஆம் பாவம்`).join(", ")
+                              ? houses
+                                  .map((house) => houseOrdinal(language, house))
+                                  .join(", ")
                               : "—";
                           };
                           return (
                             <div className={styles.timelineList}>
                               <div className={styles.timelineRow}>
                                 <strong>
-                                  மஹாதசை: {currentMaha ? LORD_TAMIL[currentMaha.lord] : "—"}
+                                  {t("home.mahadasha")}:{" "}
+                                  {currentMaha
+                                    ? lordName(language, currentMaha.lord)
+                                    : "—"}
                                 </strong>
                                 <span>
                                   {currentMaha
                                     ? `${currentMaha.start} → ${currentMaha.end ?? "—"}`
-                                    : "இந்த தேதிக்கு தரவு இல்லை"}
+                                    : t("home.noDataForDate")}
                                 </span>
                                 <span>
-                                  பாதிக்கும் பாவங்கள்: {impactedHouseText(currentMaha?.lord)}
+                                  {t("home.housesImpacted")}:{" "}
+                                  {impactedHouseText(currentMaha?.lord)}
                                 </span>
                               </div>
                               <div className={styles.timelineRow}>
                                 <strong>
-                                  புக்தி: {currentBhukti ? LORD_TAMIL[currentBhukti.lord] : "—"}
+                                  {t("home.bhukti")}:{" "}
+                                  {currentBhukti
+                                    ? lordName(language, currentBhukti.lord)
+                                    : "—"}
                                 </strong>
                                 <span>
                                   {currentBhukti
                                     ? `${currentBhukti.start} → ${currentBhukti.end ?? "—"}`
-                                    : "இந்த தேதிக்கு தரவு இல்லை"}
+                                    : t("home.noDataForDate")}
                                 </span>
                                 <span>
-                                  பாதிக்கும் பாவங்கள்: {impactedHouseText(currentBhukti?.lord)}
+                                  {t("home.housesImpacted")}:{" "}
+                                  {impactedHouseText(currentBhukti?.lord)}
                                 </span>
                               </div>
                               <div className={styles.timelineRow}>
                                 <strong>
-                                  அந்தரம்: {currentAntara ? LORD_TAMIL[currentAntara.lord] : "—"}
+                                  {t("home.antara")}:{" "}
+                                  {currentAntara
+                                    ? lordName(language, currentAntara.lord)
+                                    : "—"}
                                 </strong>
                                 <span>
                                   {currentAntara
                                     ? `${currentAntara.start} → ${currentAntara.end ?? "—"}`
-                                    : "இந்த தேதிக்கு தரவு இல்லை"}
+                                    : t("home.noDataForDate")}
                                 </span>
                                 <span>
-                                  பாதிக்கும் பாவங்கள்: {impactedHouseText(currentAntara?.lord)}
+                                  {t("home.housesImpacted")}:{" "}
+                                  {impactedHouseText(currentAntara?.lord)}
                                 </span>
                               </div>
                             </div>
@@ -1488,14 +1530,12 @@ export default function Home() {
                         })()}
                       </div>
                       <div className={styles.familyModule}>
-                        <h4>கோசாரம்</h4>
-                        <p className={styles.inlineMeta}>
-                          தேர்ந்தெடுத்த தேதிக்கான கோசாரம். லக்னத்துடன், பிறப்பு சந்திர ராசியும் ஒளிவட்டமாகக் காட்டப்படுகிறது.
-                        </p>
+                        <h4>{t("home.kocharSection")}</h4>
+                        <p className={styles.inlineMeta}>{t("home.kocharHint")}</p>
                         {familyTransitError ? (
                           <p className={styles.inlineError}>{familyTransitError}</p>
                         ) : familyTransitLoading || !familyTransitSnapshot ? (
-                          <p className={styles.inlineMeta}>கோசார நிலை ஏற்றப்படுகிறது…</p>
+                          <p className={styles.inlineMeta}>{t("home.loadingTransit")}</p>
                         ) : (
                           <SouthIndianChart
                             planetsByRasi={positionsToPlanetsByRasi(
@@ -1522,9 +1562,7 @@ export default function Home() {
                       />
                     </div>
                   ) : (
-                    <p className={styles.inlineMeta}>
-                      Compute this profile to see the kundli and Vimshottari section.
-                    </p>
+                    <p className={styles.inlineMeta}>{t("home.computePrompt")}</p>
                   )}
                 </div>
               ))}

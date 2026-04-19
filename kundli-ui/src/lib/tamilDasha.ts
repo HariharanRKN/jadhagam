@@ -11,8 +11,24 @@ export const LORD_ID_TAMIL: Record<number, string> = {
   8: "கேது",
 };
 
+export const LORD_ID_ENGLISH: Record<number, string> = {
+  0: "Sun",
+  1: "Moon",
+  2: "Mars",
+  3: "Mercury",
+  4: "Jupiter",
+  5: "Venus",
+  6: "Saturn",
+  7: "Rahu",
+  8: "Ketu",
+};
+
 export function lordTamil(id: number): string {
   return LORD_ID_TAMIL[id] ?? String(id);
+}
+
+export function lordEnglish(id: number): string {
+  return LORD_ID_ENGLISH[id] ?? String(id);
 }
 
 export function compareDashaStart(a: string, b: string): number {

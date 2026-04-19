@@ -38,6 +38,44 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.appShell {
+  min-height: 100vh;
+}
+
+.appTopbar {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+}
+
+.languageToggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.languageToggleBtn {
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.languageToggleBtn.active {
+  background: #0f766e;
+  color: #ffffff;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
@@ -52,5 +90,10 @@ a {
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
+  }
+
+  .languageToggle {
+    background: rgba(15, 23, 42, 0.92);
+    border-color: rgba(148, 163, 184, 0.24);
   }
 }

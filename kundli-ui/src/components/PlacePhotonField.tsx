@@ -23,6 +23,9 @@ export type PlacePhotonFieldHandle = {
 type Props = {
   label: string;
   placeholder?: string;
+  searchingText?: string;
+  searchFailedText?: string;
+  networkErrorText?: string;
   className?: string;
   syncValue: string;
   onPlaceSelected: (detail: {
@@ -50,6 +53,9 @@ export const PlacePhotonField = forwardRef<PlacePhotonFieldHandle, Props>(
     {
       label,
       placeholder = "Search place (OpenStreetMap via Photon)…",
+      searchingText = "Searching…",
+      searchFailedText = "Search failed",
+      networkErrorText = "Network error",
       className,
       syncValue,
       onPlaceSelected,
@@ -97,7 +103,7 @@ export const PlacePhotonField = forwardRef<PlacePhotonFieldHandle, Props>(
         const data = (await res.json()) as { features?: unknown[]; error?: string };
         if (!res.ok) {
           setSuggestions([]);
-          setFetchError(data.error ?? "Search failed");
+          setFetchError(data.error ?? searchFailedText);
           return;
         }
         const feats = (data.features ?? []).filter(isPhotonFeature);
@@ -106,11 +112,11 @@ export const PlacePhotonField = forwardRef<PlacePhotonFieldHandle, Props>(
         setHighlight(0);
       } catch {
         setSuggestions([]);
-        setFetchError("Network error");
+        setFetchError(networkErrorText);
       } finally {
         setLoading(false);
       }
-    }, []);
+    }, [networkErrorText, searchFailedText]);
 
     const selectFeature = useCallback((f: PhotonFeature) => {
       const labelText = formatPhotonFeatureLabel(f);
@@ -216,7 +222,7 @@ export const PlacePhotonField = forwardRef<PlacePhotonFieldHandle, Props>(
           onKeyDown={onKeyDown}
         />
         <div className={styles.status} aria-live="polite">
-          {loading ? "Searching…" : fetchError ? fetchError : ""}
+          {loading ? searchingText : fetchError ? fetchError : ""}
         </div>
         {open && suggestions.length > 0 && (
           <ul

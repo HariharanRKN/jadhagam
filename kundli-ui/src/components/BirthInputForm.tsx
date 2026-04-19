@@ -8,6 +8,7 @@ import {
   type PlacePhotonFieldHandle,
 } from "@/components/PlacePhotonField";
 import { fetchUtcOffsetHours } from "@/lib/timezoneClient";
+import { useTranslations } from "@/i18n/useTranslations";
 
 const PLACE_PRESETS = [
   {
@@ -57,6 +58,7 @@ interface Props {
 }
 
 export function BirthInputForm({ dark, onSuccess, onError }: Props) {
+  const { t } = useTranslations();
   const placePhotonRef = useRef<PlacePhotonFieldHandle>(null);
   const [name, setName] = useState("");
   const [gender, setGender] = useState("");
@@ -67,6 +69,33 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
   const [lng, setLng] = useState("79.8083");
   const [tz, setTz] = useState("5.5");
   const [submitting, setSubmitting] = useState(false);
+
+  const text = {
+    name: t("birthForm.name"),
+    gender: t("birthForm.gender"),
+    genderPlaceholder: t("birthForm.genderPlaceholder"),
+    female: t("birthForm.female"),
+    male: t("birthForm.male"),
+    other: t("birthForm.other"),
+    birthDate: t("birthForm.birthDate"),
+    birthTime: t("birthForm.birthTime"),
+    presets: t("birthForm.presets"),
+    placeName: t("birthForm.placeName"),
+    placePlaceholder: t("birthForm.placePlaceholder"),
+    latitude: t("birthForm.latitude"),
+    longitude: t("birthForm.longitude"),
+    timezone: t("birthForm.timezone"),
+    hint: t("birthForm.hint"),
+    submit: t("birthForm.submit"),
+    computing: t("birthForm.computing"),
+    invalidDateTime: t("birthForm.invalidDateTime"),
+    invalidNumbers: t("birthForm.invalidNumbers"),
+    networkError: t("birthForm.networkError"),
+    optional: t("birthForm.optional"),
+    searching: t("birthForm.searching"),
+    searchFailed: t("birthForm.searchFailed"),
+    placeNetworkError: t("birthForm.placeNetworkError"),
+  };
 
   const handlePlaceSelected = useCallback(
     async (detail: {
@@ -100,14 +129,14 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
     const [y, mo, d] = birthDate.split("-").map(Number);
     const [hh, mm] = birthTime.split(":").map(Number);
     if (!y || !mo || !d || Number.isNaN(hh) || Number.isNaN(mm)) {
-      onError("Enter a valid birth date and time.");
+      onError(text.invalidDateTime);
       return;
     }
     const latN = parseFloat(lat);
     const lngN = parseFloat(lng);
     const tzN = parseFloat(tz);
     if (!Number.isFinite(latN) || !Number.isFinite(lngN) || !Number.isFinite(tzN)) {
-      onError("Latitude, longitude, and timezone must be numbers.");
+      onError(text.invalidNumbers);
       return;
     }
 
@@ -158,7 +187,7 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
       }
       onSuccess(json as ChartDataPayload);
     } catch (err) {
-      onError(err instanceof Error ? err.message : "Network error");
+      onError(err instanceof Error ? err.message : text.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -171,32 +200,32 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
     >
       <div className={styles.row}>
         <label className={styles.field}>
-          <span>Name</span>
+          <span>{text.name}</span>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Optional"
+            placeholder={text.optional}
             autoComplete="name"
           />
         </label>
         <label className={styles.field}>
-          <span>Gender</span>
+          <span>{text.gender}</span>
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value)}
           >
-            <option value="">Prefer not to say</option>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-            <option value="other">Other</option>
+            <option value="">{text.genderPlaceholder}</option>
+            <option value="female">{text.female}</option>
+            <option value="male">{text.male}</option>
+            <option value="other">{text.other}</option>
           </select>
         </label>
       </div>
 
       <div className={styles.row}>
         <label className={styles.field}>
-          <span>Birth date</span>
+          <span>{text.birthDate}</span>
           <input
             type="date"
             value={birthDate}
@@ -205,7 +234,7 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
           />
         </label>
         <label className={styles.field}>
-          <span>Birth time</span>
+          <span>{text.birthTime}</span>
           <input
             type="time"
             value={birthTime}
@@ -216,7 +245,7 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
       </div>
 
       <div className={styles.presets}>
-        <span className={styles.presetsLabel}>Place presets</span>
+        <span className={styles.presetsLabel}>{text.presets}</span>
         <div className={styles.presetBtns}>
           {PLACE_PRESETS.map((p) => (
             <button
@@ -234,7 +263,11 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
       <PlacePhotonField
         ref={placePhotonRef}
         className={styles.field}
-        label="Place name"
+        label={text.placeName}
+        placeholder={text.placePlaceholder}
+        searchingText={text.searching}
+        searchFailedText={text.searchFailed}
+        networkErrorText={text.placeNetworkError}
         syncValue={placeName}
         onPlaceSelected={handlePlaceSelected}
         required
@@ -243,7 +276,7 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
 
       <div className={styles.rowThree}>
         <label className={styles.field}>
-          <span>Latitude</span>
+          <span>{text.latitude}</span>
           <input
             type="text"
             inputMode="decimal"
@@ -253,7 +286,7 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
           />
         </label>
         <label className={styles.field}>
-          <span>Longitude</span>
+          <span>{text.longitude}</span>
           <input
             type="text"
             inputMode="decimal"
@@ -263,7 +296,7 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
           />
         </label>
         <label className={styles.field}>
-          <span>Timezone (UTC+)</span>
+          <span>{text.timezone}</span>
           <input
             type="text"
             inputMode="decimal"
@@ -274,28 +307,14 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
         </label>
       </div>
 
-      <p className={styles.hint}>
-        Birth date and time are civil time at the chosen place; timezone should
-        match that location (India typically 5.5). Place search uses{" "}
-        <a
-          href="https://github.com/komoot/photon"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Photon
-        </a>{" "}
-        (OpenStreetMap) via this app&apos;s API; choosing a result fills
-        latitude and longitude. UTC offset is filled using a server timezone
-        lookup. For heavy traffic, run your own Photon instance and set{" "}
-        <code>PHOTON_API_URL</code>.
-      </p>
+      <p className={styles.hint}>{text.hint}</p>
 
       <button
         type="submit"
         className={styles.submit}
         disabled={submitting}
       >
-        {submitting ? "Computing…" : "Compute chart"}
+        {submitting ? text.computing : text.submit}
       </button>
     </form>
   );

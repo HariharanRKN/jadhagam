@@ -1,13 +1,14 @@
 "use client";
 
+import { useTranslations } from "@/i18n/useTranslations";
 import styles from "./SouthIndianChart.module.css";
 import {
   RASI_GRID,
-  RASI_TAMIL,
+  getRasiCellLabel,
   normalizePlanetsByRasi,
   getPlanetsInRasi,
-  getPlanetLabel,
-  getPlanetFullName,
+  getPlanetChipLabel,
+  getPlanetTooltipLabel,
   type SouthIndianChartProps,
 } from "./chartConfig";
 
@@ -15,18 +16,23 @@ export function SouthIndianChart({
   planetsByRasi: planetsInput,
   ascendantRasi,
   highlightedRasis = [],
-  title = "ராசி",
+  title,
   onRasiClick,
   theme = "light",
+  language: languageProp,
 }: SouthIndianChartProps) {
+  const { t, language: ctxLanguage } = useTranslations();
+  const language = languageProp ?? ctxLanguage;
   const planetsByRasi = normalizePlanetsByRasi(planetsInput);
   const highlighted = new Set(highlightedRasis);
+  const displayTitle = title ?? t("tables.defaultChartTitle");
+  const moonBadge = t("tables.moonHighlight");
 
   const handleCellClick = (rasi: number) => {
     if (onRasiClick) {
       onRasiClick(rasi);
     } else {
-      console.log("Rasi:", rasi, RASI_TAMIL[rasi]);
+      console.log("Rasi:", rasi, getRasiCellLabel(language, rasi));
     }
   };
 
@@ -52,19 +58,19 @@ export function SouthIndianChart({
                 }
               }}
             >
-              <span className={styles.rasiLabel}>{RASI_TAMIL[rasi]}</span>
+              <span className={styles.rasiLabel}>{getRasiCellLabel(language, rasi)}</span>
               {highlighted.has(rasi) ? (
-                <span className={styles.highlightBadge}>சந்</span>
+                <span className={styles.highlightBadge}>{moonBadge}</span>
               ) : null}
               <div className={styles.planets}>
                 {planets.map((name, idx) => (
                   <span
                     key={`${rasi}-${name}-${idx}`}
                     className={styles.planetChip}
-                    data-tooltip={getPlanetFullName(name)}
-                    title={getPlanetFullName(name)}
+                    data-tooltip={getPlanetTooltipLabel(language, name)}
+                    title={getPlanetTooltipLabel(language, name)}
                   >
-                    {getPlanetLabel(name)}
+                    {getPlanetChipLabel(language, name)}
                   </span>
                 ))}
               </div>
@@ -75,7 +81,7 @@ export function SouthIndianChart({
           className={styles.center}
           style={{ gridRow: "2 / 4", gridColumn: "2 / 4" }}
         >
-          <span className={styles.centerTitle}>{title}</span>
+          <span className={styles.centerTitle}>{displayTitle}</span>
         </div>
       </div>
     </div>

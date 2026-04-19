@@ -1,5 +1,7 @@
 "use client";
 
+import { VIMSOTTARI_LABELS_EN } from "@/i18n/vimsottariLabelsEn";
+import { useTranslations } from "@/i18n/useTranslations";
 import type {
   AntaraRow,
   BhuktiRow,
@@ -7,7 +9,7 @@ import type {
   SookshmaRow,
   VimsottariLabelsTa,
 } from "@/types/chartData";
-import { compareDashaStart, lordTamil } from "@/lib/tamilDasha";
+import { compareDashaStart, lordEnglish, lordTamil } from "@/lib/tamilDasha";
 import styles from "./TamilTables.module.css";
 
 interface Props {
@@ -35,6 +37,11 @@ export function VimsottariExpander({
   labels,
   dark,
 }: Props) {
+  const { t, language } = useTranslations();
+  const tableLabels = language === "en" ? VIMSOTTARI_LABELS_EN : labels;
+  const lord = (id: number) => (language === "en" ? lordEnglish(id) : lordTamil(id));
+  const intro = t("tables.vimsottariExpanderIntro");
+
   const mahasSorted = [...mahas].sort((a, b) =>
     compareDashaStart(a.start, b.start)
   );
@@ -66,12 +73,11 @@ export function VimsottariExpander({
   return (
     <section className={`${styles.section} ${dark ? styles.themeDark : ""}`}>
       <h2 className={styles.sectionTitle}>
-        {labels.dashaTitle} — {labels.mahadasha} / {labels.bhukti} /{" "}
-        {labels.antara} / {labels.sookshma}
+        {tableLabels.dashaTitle} — {tableLabels.mahadasha} / {tableLabels.bhukti} /{" "}
+        {tableLabels.antara} / {tableLabels.sookshma}
       </h2>
       <p className={styles.loading} style={{ marginBottom: "0.75rem" }}>
-        ஒவ்வொரு மஹா தசையையும் விரிவாக்கி புக்தி, அந்தர்தசை, சூக்ஷ்ம தசை
-        கால வரம்புகளைக் காணலாம்.
+        {intro}
       </p>
 
       <div className={styles.expander}>
@@ -79,7 +85,7 @@ export function VimsottariExpander({
           <details key={`m-${m.lord}-${m.start}`}>
             <summary>
               <span>
-                {labels.mahadasha}: {lordTamil(m.lord)}
+                {tableLabels.mahadasha}: {lord(m.lord)}
               </span>
               <DateRange start={m.start} end={m.end} />
             </summary>
@@ -88,7 +94,7 @@ export function VimsottariExpander({
                 <details key={`b-${b.lord}-${b.start}`}>
                   <summary>
                     <span>
-                      {labels.bhukti}: {lordTamil(b.lord)}
+                      {tableLabels.bhukti}: {lord(b.lord)}
                     </span>
                     <DateRange start={b.start} end={b.end} />
                   </summary>
@@ -97,7 +103,7 @@ export function VimsottariExpander({
                       <details key={`a-${a.lord}-${a.start}`}>
                         <summary>
                           <span>
-                            {labels.antara}: {lordTamil(a.lord)}
+                            {tableLabels.antara}: {lord(a.lord)}
                           </span>
                           <DateRange start={a.start} end={a.end} />
                         </summary>
@@ -108,7 +114,7 @@ export function VimsottariExpander({
                               className={styles.leaf}
                             >
                               <span>
-                                {labels.sookshma}: {lordTamil(sk.lord)}
+                                {tableLabels.sookshma}: {lord(sk.lord)}
                               </span>
                               <DateRange start={sk.start} end={sk.end} />
                             </div>

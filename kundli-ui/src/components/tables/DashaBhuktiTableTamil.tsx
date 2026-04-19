@@ -1,5 +1,9 @@
+"use client";
+
+import { VIMSOTTARI_LABELS_EN } from "@/i18n/vimsottariLabelsEn";
+import { useTranslations } from "@/i18n/useTranslations";
 import type { BhuktiRow, VimsottariLabelsTa } from "@/types/chartData";
-import { compareDashaStart, lordTamil } from "@/lib/tamilDasha";
+import { compareDashaStart, lordEnglish, lordTamil } from "@/lib/tamilDasha";
 import styles from "./TamilTables.module.css";
 
 interface Props {
@@ -9,28 +13,32 @@ interface Props {
 }
 
 export function DashaBhuktiTableTamil({ rows, labels, dark }: Props) {
+  const { language } = useTranslations();
+  const tableLabels = language === "en" ? VIMSOTTARI_LABELS_EN : labels;
+  const lord = (id: number) => (language === "en" ? lordEnglish(id) : lordTamil(id));
+
   const sorted = [...rows].sort((a, b) => compareDashaStart(a.start, b.start));
 
   return (
     <section className={`${styles.section} ${dark ? styles.themeDark : ""}`}>
       <h2 className={styles.sectionTitle}>
-        {labels.dashaTitle} — {labels.mahadasha} / {labels.bhukti}
+        {tableLabels.dashaTitle} — {tableLabels.mahadasha} / {tableLabels.bhukti}
       </h2>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>{labels.mahadasha}</th>
-              <th>{labels.bhukti}</th>
-              <th>{labels.start}</th>
-              <th>{labels.end}</th>
+              <th>{tableLabels.mahadasha}</th>
+              <th>{tableLabels.bhukti}</th>
+              <th>{tableLabels.start}</th>
+              <th>{tableLabels.end}</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((r, i) => (
               <tr key={`${r.maha}-${r.lord}-${r.start}-${i}`}>
-                <td>{lordTamil(r.maha)}</td>
-                <td>{lordTamil(r.lord)}</td>
+                <td>{lord(r.maha)}</td>
+                <td>{lord(r.lord)}</td>
                 <td className={styles.mono}>{r.start}</td>
                 <td className={styles.mono}>{r.end ?? "—"}</td>
               </tr>
