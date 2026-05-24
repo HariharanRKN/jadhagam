@@ -1,0 +1,500 @@
+{
+  "burnout": {
+    "dimensions": {
+      "responsibility": 0.95,
+      "burnout_risk": 0.92,
+      "inner_restlessness": 0.84,
+      "meaning_drive": 0.72,
+      "fragmentation_risk": 0.81,
+      "pressure": 0.88
+    }
+  },
+  "marriage": {
+    "dimensions": {
+      "relationship_orientation": 0.95,
+      "bonding": 0.92,
+      "stability": 0.8,
+      "harmony": 0.84,
+      "family_alignment": 0.76
+    }
+  },
+  "marriage_timing": {
+    "dimensions": {
+      "relationship_orientation": 0.95,
+      "bonding": 0.9,
+      "relationship_stability": 0.86,
+      "family_alignment": 0.78,
+      "domestic_harmony": 0.72,
+      "luck": 0.62
+    }
+  },
+  "meet_love_of_life": {
+    "dimensions": {
+      "attraction": 0.9,
+      "romance": 0.92,
+      "connection": 0.84,
+      "bonding": 0.78,
+      "luck": 0.68,
+      "visibility": 0.62
+    }
+  },
+  "marital_issues": {
+    "dimensions": {
+      "conflict": 0.9,
+      "miscommunication_risk": 0.86,
+      "trust": 0.72,
+      "trust_breach_risk": 0.62,
+      "relationship_repair": 0.75,
+      "emotional_security": 0.7
+    }
+  },
+  "divorce_separation": {
+    "dimensions": {
+      "divorce_separation_risk": 0.92,
+      "conflict": 0.82,
+      "trust_breach_risk": 0.72,
+      "constraints": 0.68,
+      "emotional_burden": 0.66,
+      "decision_clarity": 0.6
+    }
+  },
+  "reconciliation": {
+    "dimensions": {
+      "relationship_repair": 0.92,
+      "forgiveness": 0.84,
+      "trust": 0.78,
+      "empathy": 0.74,
+      "intimacy": 0.72,
+      "emotional_healing": 0.7
+    }
+  },
+  "breakup": {
+    "dimensions": {
+      "conflict": 0.72,
+      "relationship_stability": 0.95,
+      "trust": 0.72,
+      "emotional_burden": 0.76,
+      "emotional_healing": 0.78,
+      "constraints": 0.62
+    }
+  },
+  "tough_phase_relationship": {
+    "dimensions": {
+      "emotional_burden": 0.88,
+      "anxiety": 0.82,
+      "inner_restlessness": 0.78,
+      "relationship_repair": 0.72,
+      "support_system": 0.62,
+      "recovery_capacity": 0.7
+    }
+  },
+  "cheating_betrayal": {
+    "dimensions": {
+      "trust_breach_risk": 0.95,
+      "trust": 0.85,
+      "conflict": 0.7,
+      "miscommunication_risk": 0.68,
+      "emotional_burden": 0.76,
+      "integrity": 0.72
+    }
+  },
+  "career_growth": {
+    "dimensions": {
+      "ambition": 0.92,
+      "execution_drive": 0.88,
+      "leadership": 0.82,
+      "responsibility": 0.86,
+      "expansion_drive": 0.84
+    }
+  },
+  "job_loss_fired": {
+    "dimensions": {
+      "job_security": 0.95,
+      "constraints": 0.8,
+      "financial_pressure": 0.76,
+      "anxiety": 0.72,
+      "recovery_capacity": 0.7,
+      "support_system": 0.6
+    }
+  },
+  "job_search": {
+    "dimensions": {
+      "career_momentum": 0.86,
+      "networking": 0.78,
+      "learning": 0.72,
+      "confidence": 0.7,
+      "constraints": 0.62,
+      "visibility": 0.64
+    }
+  },
+  "job_offer_success": {
+    "dimensions": {
+      "career_momentum": 0.9,
+      "visibility": 0.78,
+      "public_reputation": 0.72,
+      "confidence": 0.74,
+      "luck": 0.66,
+      "freedom": 0.62
+    }
+  },
+  "career_switch": {
+    "dimensions": {
+      "career_change": 0.9,
+      "adaptability": 0.78,
+      "learning": 0.74,
+      "constraints": 0.66,
+      "confidence": 0.62,
+      "career_momentum": 0.58
+    }
+  },
+  "job_switch_blocked": {
+    "dimensions": {
+      "constraints": 0.9,
+      "career_momentum": 0.82,
+      "restlessness": 0.76,
+      "pressure": 0.7,
+      "confidence": 0.62,
+      "adaptability": 0.64
+    }
+  },
+  "life_stuck": {
+    "dimensions": {
+      "constraints": 0.92,
+      "fragmentation_risk": 0.72,
+      "meaning_drive": 0.78,
+      "pressure": 0.7,
+      "recovery_capacity": 0.64,
+      "discipline": 0.62
+    }
+  },
+  "money_blocked": {
+    "dimensions": {
+      "financial_pressure": 0.9,
+      "constraints": 0.78,
+      "abundance": 0.82,
+      "money_management": 0.72,
+      "anxiety": 0.68,
+      "financial_growth": 0.66
+    }
+  },
+  "wealth_growth": {
+    "dimensions": {
+      "financial_growth": 0.92,
+      "prosperity_potential": 0.86,
+      "risk_tolerance": 0.74,
+      "career_momentum": 0.72,
+      "status": 0.7,
+      "money_management": 0.68
+    }
+  },
+  "millionaire_billionaire_potential": {
+    "dimensions": {
+      "prosperity_potential": 0.95,
+      "financial_growth": 0.88,
+      "ambition": 0.84,
+      "risk_tolerance": 0.78,
+      "leadership": 0.72,
+      "visibility": 0.7
+    }
+  },
+  "friends_issues": {
+    "dimensions": {
+      "connection": 0.82,
+      "conflict": 0.7,
+      "trust": 0.68,
+      "miscommunication_risk": 0.74,
+      "support_system": 0.78,
+      "integrity": 0.62
+    }
+  },
+  "family_issues": {
+    "dimensions": {
+      "family_alignment": 0.9,
+      "domestic_harmony": 0.82,
+      "conflict": 0.72,
+      "emotional_security": 0.74,
+      "responsibility": 0.7,
+      "constraints": 0.62
+    }
+  },
+  "property_purchase": {
+    "dimensions": {
+      "asset_acquisition": 0.9,
+      "home_property": 0.92,
+      "loan_approval": 0.78,
+      "financial_pressure": 0.7,
+      "money_management": 0.72,
+      "decision_clarity": 0.62
+    }
+  },
+  "second_house_purchase": {
+    "dimensions": {
+      "asset_acquisition": 0.92,
+      "home_property": 0.95,
+      "financial_growth": 0.78,
+      "loan_approval": 0.72,
+      "money_management": 0.7,
+      "abundance": 0.66
+    }
+  },
+  "loan_approval_success": {
+    "dimensions": {
+      "loan_approval": 0.95,
+      "cashflow": 0.78,
+      "money_management": 0.74,
+      "constraints": 0.62,
+      "financial_pressure": 0.66,
+      "confidence": 0.6
+    }
+  },
+  "debt_relief": {
+    "dimensions": {
+      "debt_pressure": 0.9,
+      "financial_pressure": 0.82,
+      "cashflow": 0.78,
+      "money_management": 0.74,
+      "recovery_capacity": 0.66,
+      "discipline": 0.62
+    }
+  },
+  "investment_opportunity": {
+    "dimensions": {
+      "investment_gain": 0.9,
+      "risk_tolerance": 0.78,
+      "financial_growth": 0.74,
+      "pattern_recognition": 0.66,
+      "decision_clarity": 0.64,
+      "money_management": 0.62
+    }
+  },
+  "relocation_move": {
+    "dimensions": {
+      "relocation": 0.92,
+      "adaptability": 0.78,
+      "constraints": 0.66,
+      "freedom": 0.72,
+      "domestic_harmony": 0.6,
+      "foreign_travel": 0.58
+    }
+  },
+  "foreign_travel_settlement": {
+    "dimensions": {
+      "foreign_travel": 0.86,
+      "foreign_settlement": 0.82,
+      "adaptability": 0.74,
+      "career_momentum": 0.62,
+      "constraints": 0.6,
+      "luck": 0.58
+    }
+  },
+  "childbirth": {
+    "dimensions": {
+      "children_fertility": 0.92,
+      "domestic_harmony": 0.74,
+      "bonding": 0.72,
+      "childcare_responsibility": 0.78,
+      "emotional_security": 0.66,
+      "responsibility": 0.62
+    }
+  },
+  "fertility_concerns": {
+    "dimensions": {
+      "children_fertility": 0.9,
+      "anxiety": 0.78,
+      "health_risk": 0.7,
+      "emotional_burden": 0.74,
+      "recovery_capacity": 0.6,
+      "support_system": 0.58
+    }
+  },
+  "health_issue": {
+    "dimensions": {
+      "health_risk": 0.92,
+      "energy_vitality": 0.82,
+      "anxiety": 0.7,
+      "constraints": 0.66,
+      "recovery_capacity": 0.64,
+      "discipline": 0.58
+    }
+  },
+  "legal_dispute": {
+    "dimensions": {
+      "court_case_risk": 0.9,
+      "conflict": 0.78,
+      "constraints": 0.72,
+      "integrity": 0.62,
+      "decision_clarity": 0.6,
+      "pressure": 0.58
+    }
+  },
+  "property_dispute_case": {
+    "dimensions": {
+      "property_dispute": 0.92,
+      "court_case_risk": 0.82,
+      "conflict": 0.78,
+      "constraints": 0.72,
+      "family_alignment": 0.6,
+      "pressure": 0.58
+    }
+  },
+  "education_exam_success": {
+    "dimensions": {
+      "education_success": 0.92,
+      "learning": 0.82,
+      "discipline": 0.74,
+      "confidence": 0.66,
+      "pressure": 0.62,
+      "luck": 0.58
+    }
+  },
+  "business_growth": {
+    "dimensions": {
+      "business_growth": 0.92,
+      "career_momentum": 0.78,
+      "risk_tolerance": 0.7,
+      "leadership": 0.66,
+      "visibility": 0.64,
+      "money_management": 0.6
+    }
+  },
+  "promotion_appraisal": {
+    "dimensions": {
+      "career_momentum": 0.9,
+      "public_reputation": 0.78,
+      "status": 0.74,
+      "leadership": 0.7,
+      "confidence": 0.66,
+      "luck": 0.58
+    }
+  },
+  "authority_conflict": {
+    "dimensions": {
+      "authority": 0.9,
+      "conflict": 0.78,
+      "constraints": 0.7,
+      "public_reputation": 0.64,
+      "pressure": 0.6,
+      "integrity": 0.58
+    }
+  },
+  "workplace_conflict": {
+    "dimensions": {
+      "conflict": 0.86,
+      "pressure": 0.78,
+      "public_reputation": 0.66,
+      "miscommunication_risk": 0.72,
+      "constraints": 0.6,
+      "recovery_capacity": 0.58
+    }
+  },
+  "negotiation_settlement": {
+    "dimensions": {
+      "negotiation": 0.9,
+      "decision_clarity": 0.72,
+      "integrity": 0.66,
+      "confidence": 0.62,
+      "constraints": 0.58,
+      "luck": 0.54
+    }
+  },
+  "creative_breakthrough": {
+    "dimensions": {
+      "creativity": 0.92,
+      "meaning_drive": 0.74,
+      "confidence": 0.66,
+      "visibility": 0.6,
+      "recovery_capacity": 0.58,
+      "discipline": 0.54
+    }
+  },
+  "spiritual_turning_point": {
+    "dimensions": {
+      "spiritual_growth": 0.92,
+      "existential_questioning": 0.78,
+      "meaning_drive": 0.74,
+      "emotional_healing": 0.6,
+      "discipline": 0.58,
+      "freedom": 0.54
+    }
+  },
+  "vehicle_purchase": {
+    "dimensions": {
+      "vehicle_purchase": 0.92,
+      "asset_acquisition": 0.74,
+      "loan_approval": 0.7,
+      "cashflow": 0.66,
+      "money_management": 0.62,
+      "decision_clarity": 0.58
+    }
+  },
+  "childbirth_boy": {
+    "dimensions": {
+      "children_fertility": 0.92,
+      "domestic_harmony": 0.74,
+      "bonding": 0.72,
+      "childcare_responsibility": 0.78,
+      "emotional_security": 0.66,
+      "responsibility": 0.62
+    }
+  },
+  "childbirth_girl": {
+    "dimensions": {
+      "children_fertility": 0.92,
+      "domestic_harmony": 0.74,
+      "bonding": 0.72,
+      "childcare_responsibility": 0.78,
+      "emotional_security": 0.66,
+      "responsibility": 0.62
+    }
+  },
+  "fight_father": {
+    "dimensions": {
+      "conflict": 0.9,
+      "family_alignment": 0.78,
+      "miscommunication_risk": 0.74,
+      "emotional_burden": 0.7,
+      "pressure": 0.62,
+      "emotional_security": 0.6
+    }
+  },
+  "fight_mother": {
+    "dimensions": {
+      "conflict": 0.88,
+      "family_alignment": 0.78,
+      "miscommunication_risk": 0.76,
+      "emotional_burden": 0.72,
+      "empathy": 0.6,
+      "emotional_security": 0.62
+    }
+  },
+  "fight_brother": {
+    "dimensions": {
+      "conflict": 0.86,
+      "connection": 0.7,
+      "miscommunication_risk": 0.74,
+      "trust": 0.62,
+      "emotional_burden": 0.6,
+      "family_alignment": 0.58
+    }
+  },
+  "fight_sister": {
+    "dimensions": {
+      "conflict": 0.86,
+      "connection": 0.7,
+      "miscommunication_risk": 0.74,
+      "trust": 0.62,
+      "emotional_burden": 0.6,
+      "family_alignment": 0.58
+    }
+  },
+  "fight_spouse": {
+    "dimensions": {
+      "conflict": 0.9,
+      "miscommunication_risk": 0.84,
+      "trust": 0.68,
+      "relationship_repair": 0.72,
+      "emotional_burden": 0.66,
+      "emotional_security": 0.62
+    }
+  }
+}

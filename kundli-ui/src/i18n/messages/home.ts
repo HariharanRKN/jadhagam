@@ -17,6 +17,7 @@ export const home = {
     tabKochar: "Transit watch",
     tabMarriage: "Marriage",
     tabFamily: "Family",
+    tabBirthTime: "Birth time",
     loadErrorPrefix: "Could not load chart data:",
     loadErrorSuffix:
       "Place chart-data.json in public/ or run the Python exporter.",
@@ -136,6 +137,7 @@ export const home = {
     tabKochar: "கோசார கண்காணிப்பு",
     tabMarriage: "திருமணம்",
     tabFamily: "குடும்பம்",
+    tabBirthTime: "பிறந்த நேரம்",
     loadErrorPrefix: "ஜாதகத் தரவை ஏற்ற முடியவில்லை:",
     loadErrorSuffix:
       "public/ இல் chart-data.json வைக்கவும் அல்லது Python ஏற்றுமதி நிரலை இயக்கவும்.",

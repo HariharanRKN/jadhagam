@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { LanguageCode } from "@/components/LanguageProvider";
 import { SouthIndianChart } from "@/components/SouthIndianChart/SouthIndianChart";
 import { BirthInputForm } from "@/components/BirthInputForm";
+import { BirthTimeIdentifier } from "@/components/BirthTimeIdentifier";
 import { PlacePhotonField } from "@/components/PlacePhotonField";
 import { PlanetaryTableTamil } from "@/components/tables/PlanetaryTableTamil";
 import { DashaBhuktiTableTamil } from "@/components/tables/DashaBhuktiTableTamil";
@@ -13,7 +14,7 @@ import { getMessage, interpolate, useTranslations } from "@/i18n/useTranslations
 import type { AntaraRow, ChartDataPayload } from "@/types/chartData";
 import styles from "./page.module.css";
 
-type TrackerTab = "kundli" | "kochar" | "marriage" | "family";
+type TrackerTab = "kundli" | "kochar" | "marriage" | "family" | "birthTime";
 
 type HistoricalPositionsResponse = {
   dateIst: string;
@@ -919,6 +920,13 @@ export default function Home() {
         >
           {t("home.tabFamily")}
         </button>
+        <button
+          type="button"
+          className={`${styles.tabBtn} ${activeTab === "birthTime" ? styles.tabBtnActive : ""}`}
+          onClick={() => setActiveTab("birthTime")}
+        >
+          {t("home.tabBirthTime")}
+        </button>
       </div>
 
       {apiError && (
@@ -976,6 +984,21 @@ export default function Home() {
             dark={dark}
           />
         </>
+      )}
+
+      {activeTab === "birthTime" && (
+        <BirthTimeIdentifier
+          dark={dark}
+          seed={
+            data?.meta
+              ? {
+                  dob: data.meta.dob,
+                  tob: data.meta.tob,
+                  place: data.meta.place,
+                }
+              : null
+          }
+        />
       )}
 
       {data && activeTab === "kochar" && (

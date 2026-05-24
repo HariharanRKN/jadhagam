@@ -1,0 +1,357 @@
+{
+  "schemaVersion": 1,
+  "dimensions": {
+    "abundance": {
+      "description": "Sense of plenty, resources, receiving, flow of support.",
+      "aliases": ["plenty", "resourcefulness"]
+    },
+    "asset_acquisition": {
+      "description": "Buying/accumulating assets (property, vehicles, land, durable wealth).",
+      "aliases": ["asset_purchase"]
+    },
+    "adaptability": {
+      "description": "Flexibility, ability to adjust, learn, and pivot under change.",
+      "aliases": ["flexibility"]
+    },
+    "ambition": {
+      "description": "Drive to achieve goals, status, growth, competition.",
+      "aliases": ["drive", "aspiration"]
+    },
+    "anxiety": {
+      "description": "Worry, nervousness, anticipatory stress, insecurity about outcomes.",
+      "aliases": ["worry"]
+    },
+    "assertiveness": {
+      "description": "Directness, initiative, willingness to confront or act.",
+      "aliases": ["boldness"]
+    },
+    "attraction": {
+      "description": "Romantic/sexual pull, magnetism, interest, desire.",
+      "aliases": ["chemistry", "desire"]
+    },
+    "authority": {
+      "description": "Formal power, command, seniority, ability to enforce decisions.",
+      "aliases": ["command"]
+    },
+    "bonding": {
+      "description": "Attachment, commitment, emotional joining, partnership glue.",
+      "aliases": ["attachment", "commitment"]
+    },
+    "burnout_risk": {
+      "description": "Risk of exhaustion due to sustained effort, pressure, or depletion.",
+      "aliases": ["exhaustion_risk"]
+    },
+    "business_growth": {
+      "description": "Business expansion, scaling, revenue growth, entrepreneurship momentum.",
+      "aliases": ["entrepreneurship"]
+    },
+    "cashflow": {
+      "description": "Liquidity, monthly inflow/outflow balance, ability to pay near-term expenses.",
+      "aliases": ["liquidity"]
+    },
+    "career_momentum": {
+      "description": "Forward movement in career, promotions, traction, visibility of progress.",
+      "aliases": ["career_progress"]
+    },
+    "career_change": {
+      "description": "Switching roles/industries; transitions and readiness to pivot career direction.",
+      "aliases": ["career_switch"]
+    },
+    "children_fertility": {
+      "description": "Fertility, conception potential, desire/ability to have children.",
+      "aliases": ["fertility"]
+    },
+    "childcare_responsibility": {
+      "description": "Parenting load, childcare duties, responsibility toward kids.",
+      "aliases": ["parenting_load"]
+    },
+    "confidence": {
+      "description": "Self-belief, courage, internal certainty, feeling capable.",
+      "aliases": ["self_belief"]
+    },
+    "conflict": {
+      "description": "Friction, arguments, disagreements, adversarial dynamics.",
+      "aliases": ["friction"]
+    },
+    "creativity": {
+      "description": "Imagination, artistic output, novel ideas, creative expression.",
+      "aliases": ["artistry"]
+    },
+    "connection": {
+      "description": "Social/relational closeness, rapport, feeling understood.",
+      "aliases": ["rapport"]
+    },
+    "court_case_risk": {
+      "description": "Risk of litigation, legal disputes, court involvement.",
+      "aliases": ["legal_risk", "litigation_risk"]
+    },
+    "constraints": {
+      "description": "Blockages, restrictions, lack of freedom, delays or obstacles.",
+      "aliases": ["blocks", "limitations"]
+    },
+    "debt_pressure": {
+      "description": "Debt load and repayment stress; loans, EMIs, obligations.",
+      "aliases": ["debt_load"]
+    },
+    "decision_clarity": {
+      "description": "Clarity, discernment, ability to choose without confusion.",
+      "aliases": ["discernment"]
+    },
+    "discipline": {
+      "description": "Consistency, structure, routines, patience, delayed gratification.",
+      "aliases": ["structure", "rigor"]
+    },
+    "divorce_separation_risk": {
+      "description": "Risk of separation, divorce, long-term relationship rupture.",
+      "aliases": ["separation_risk"]
+    },
+    "domestic_harmony": {
+      "description": "Peace and functioning at home; family comfort and household stability.",
+      "aliases": ["home_harmony"]
+    },
+    "education_success": {
+      "description": "Academic performance, exam success, learning outcomes.",
+      "aliases": ["exam_success"]
+    },
+    "emotional_healing": {
+      "description": "Recovery, integration, closure, regaining balance after pain.",
+      "aliases": ["healing"]
+    },
+    "emotional_burden": {
+      "description": "Heaviness, sadness, emotional load or duty affecting mood.",
+      "aliases": ["emotional_weight"]
+    },
+    "emotional_restraint": {
+      "description": "Containment of emotions, guarded expression, composure.",
+      "aliases": ["stoicism"]
+    },
+    "emotional_security": {
+      "description": "Feeling safe, supported, steady; low fear of abandonment or loss.",
+      "aliases": ["safety"]
+    },
+    "empathy": {
+      "description": "Understanding others' feelings; compassion and care.",
+      "aliases": ["compassion"]
+    },
+    "energy_vitality": {
+      "description": "Physical energy, vitality, stamina, life-force.",
+      "aliases": ["vitality"]
+    },
+    "execution_drive": {
+      "description": "Ability and momentum to execute tasks, push through obstacles.",
+      "aliases": ["throughput"]
+    },
+    "existential_questioning": {
+      "description": "Tendency to question meaning, purpose, belief systems.",
+      "aliases": ["meaning_questions"]
+    },
+    "expansion_drive": {
+      "description": "Growth, learning, optimism, broadening horizons.",
+      "aliases": ["growth"]
+    },
+    "family_alignment": {
+      "description": "Fit with family expectations and long-term domestic alignment.",
+      "aliases": ["family_fit"]
+    },
+    "financial_growth": {
+      "description": "Capacity for income increase, wealth compounding, scalable upside.",
+      "aliases": ["wealth_growth", "upside"]
+    },
+    "financial_pressure": {
+      "description": "Money stress, obligations, cashflow strain, debt/expense load.",
+      "aliases": ["money_stress"]
+    },
+    "foreign_travel": {
+      "description": "International travel/relocation themes, cross-border movement.",
+      "aliases": ["overseas_travel"]
+    },
+    "foreign_settlement": {
+      "description": "Longer-term settling abroad: immigration, residency, living overseas.",
+      "aliases": ["immigration"]
+    },
+    "forgiveness": {
+      "description": "Letting go of resentment, ability to reconcile or soften blame.",
+      "aliases": ["reconciliation_readiness"]
+    },
+    "fragmentation_risk": {
+      "description": "Scattered focus, instability, conflicting pulls or disintegration.",
+      "aliases": ["instability_risk"]
+    },
+    "freedom": {
+      "description": "Autonomy, room to maneuver, independence from constraints.",
+      "aliases": ["autonomy"]
+    },
+    "health_risk": {
+      "description": "Likelihood of health issues, vulnerability, disease/accident risk.",
+      "aliases": ["illness_risk"]
+    },
+    "home_property": {
+      "description": "Property, home ownership, land/real-estate matters and stability.",
+      "aliases": ["real_estate"]
+    },
+    "harmony": {
+      "description": "Ease, peace, cooperation, lack of friction in relationships.",
+      "aliases": ["peace"]
+    },
+    "integrity": {
+      "description": "Honesty, moral consistency, alignment between words and actions.",
+      "aliases": ["honesty"]
+    },
+    "inner_restlessness": {
+      "description": "Internal agitation, anxiety, unsettled mind or emotional churn.",
+      "aliases": ["agitation"]
+    },
+    "intimacy": {
+      "description": "Emotional closeness, vulnerability, affection, mutual openness.",
+      "aliases": ["closeness"]
+    },
+    "investment_gain": {
+      "description": "Returns from investments, market gains, portfolio growth.",
+      "aliases": ["investment_profit"]
+    },
+    "job_security": {
+      "description": "Stability and continuity of employment; low risk of job loss.",
+      "aliases": ["employment_stability"]
+    },
+    "loan_approval": {
+      "description": "Ability to secure loans/credit; approvals for financing.",
+      "aliases": ["credit_access"]
+    },
+    "leadership": {
+      "description": "Taking charge, responsibility for others, influence and direction.",
+      "aliases": ["influence"]
+    },
+    "learning": {
+      "description": "Skill acquisition, curiosity, study, training and improvement.",
+      "aliases": ["skill_building"]
+    },
+    "luck": {
+      "description": "Favorable timing, supportive coincidences, ease of opportunity.",
+      "aliases": ["good_fortune"]
+    },
+    "miscommunication_risk": {
+      "description": "Likelihood of misunderstanding, mixed signals, and communication breakdown.",
+      "aliases": ["communication_noise"]
+    },
+    "money_management": {
+      "description": "Budgeting, saving, risk control, financial discipline and planning.",
+      "aliases": ["financial_discipline"]
+    },
+    "negotiation": {
+      "description": "Ability to bargain, resolve terms, and reach favorable agreements.",
+      "aliases": ["bargaining"]
+    },
+    "meaning_drive": {
+      "description": "Need for purpose, significance, narrative coherence.",
+      "aliases": ["purpose"]
+    },
+    "networking": {
+      "description": "Ability to build connections, leverage contacts, social capital.",
+      "aliases": ["social_capital"]
+    },
+    "optimism": {
+      "description": "Positive expectation, hopefulness, constructive outlook.",
+      "aliases": ["hope"]
+    },
+    "pattern_recognition": {
+      "description": "Seeing connections, abstractions, systems, symbolic relationships.",
+      "aliases": ["systems_thinking"]
+    },
+    "public_reputation": {
+      "description": "Standing in community/work, recognition, credibility, name value.",
+      "aliases": ["reputation", "standing"]
+    },
+    "property_dispute": {
+      "description": "Conflicts about land/property, inheritance, boundaries, ownership disputes.",
+      "aliases": ["real_estate_dispute"]
+    },
+    "recovery_capacity": {
+      "description": "Ability to bounce back after setbacks; resilience and re-stabilization.",
+      "aliases": ["bounce_back"]
+    },
+    "relationship_repair": {
+      "description": "Capacity to fix, renegotiate, and improve a relationship after conflict.",
+      "aliases": ["repair"]
+    },
+    "philosophy": {
+      "description": "Interest in principles, ethics, belief, wisdom and worldview.",
+      "aliases": ["wisdom"]
+    },
+    "pressure": {
+      "description": "External constraints, load, deadlines, stress from obligation.",
+      "aliases": ["stress_load"]
+    },
+    "prosperity_potential": {
+      "description": "Ceiling of wealth outcomes (e.g., millionaire/billionaire scale), scaling leverage.",
+      "aliases": ["wealth_ceiling", "scale_potential"]
+    },
+    "risk_tolerance": {
+      "description": "Willingness to take calculated risks; comfort with uncertainty for upside.",
+      "aliases": ["risk_appetite"]
+    },
+    "relocation": {
+      "description": "Moving homes/cities; major location change, resettlement.",
+      "aliases": ["move_house"]
+    },
+    "relationship_orientation": {
+      "description": "Prioritization of relationship needs, partnership seeking.",
+      "aliases": ["partnership_focus"]
+    },
+    "relationship_stability": {
+      "description": "Durability of partnership; low volatility, fewer break/return cycles.",
+      "aliases": ["pair_stability"]
+    },
+    "responsibility": {
+      "description": "Duty, accountability, reliability, carrying obligations.",
+      "aliases": ["duty"]
+    },
+    "restlessness": {
+      "description": "Urgency, impatience, desire for change or stimulation.",
+      "aliases": ["impatience"]
+    },
+    "romance": {
+      "description": "Love, affection, warmth, sweetness; romantic tone and enjoyment.",
+      "aliases": ["love"]
+    },
+    "sensitivity": {
+      "description": "Emotional receptivity, empathy, strong affective response.",
+      "aliases": ["receptivity"]
+    },
+    "support_system": {
+      "description": "Presence of helpful allies: friends, mentors, family backing, community.",
+      "aliases": ["backing"]
+    },
+    "spiritual_growth": {
+      "description": "Spiritual development, devotion, inner practice, faith deepening.",
+      "aliases": ["devotion"]
+    },
+    "stability": {
+      "description": "Consistency, predictability, steadiness and durability over time.",
+      "aliases": ["steadiness"]
+    },
+    "status": {
+      "description": "Rank, prestige, social standing, respect and recognition.",
+      "aliases": ["prestige"]
+    },
+    "symbolic_thinking": {
+      "description": "Use of symbols, metaphors, archetypes to reason or interpret.",
+      "aliases": ["archetypal_thinking"]
+    },
+    "trust": {
+      "description": "Reliability, faith in partner/others, belief that intentions are good.",
+      "aliases": ["faith", "reliance"]
+    },
+    "trust_breach_risk": {
+      "description": "Risk of betrayal, cheating, secrecy, broken promises, hidden actions.",
+      "aliases": ["betrayal_risk"]
+    },
+    "vehicle_purchase": {
+      "description": "Buying vehicles and related big-ticket mobility assets.",
+      "aliases": ["car_purchase"]
+    },
+    "visibility": {
+      "description": "Being seen: discoverability, spotlight, attention in work or society.",
+      "aliases": ["exposure"]
+    }
+  }
+}
