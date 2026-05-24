@@ -28,6 +28,7 @@ WORKDIR /app
 COPY requirements.txt horoscope.py ./
 COPY scripts ./scripts
 COPY data ./data
+COPY semantic ./semantic
 RUN pip install --no-cache-dir -r requirements.txt
 
 WORKDIR /app/web
