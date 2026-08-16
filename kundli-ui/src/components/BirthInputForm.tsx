@@ -10,7 +10,7 @@ import {
 import { fetchUtcOffsetHours } from "@/lib/timezoneClient";
 import { useTranslations } from "@/i18n/useTranslations";
 import type { BirthFormValues } from "@/lib/kundalis/client";
-import { formValuesToSavePayload } from "@/lib/kundalis/client";
+import { formValuesToSavePayload, formatSavedKundaliLabel } from "@/lib/kundalis/client";
 import type { SavedKundali } from "@/lib/kundalis/types";
 
 const PLACE_PRESETS = [
@@ -57,12 +57,22 @@ const DEFAULT_TIME = "17:00";
 interface Props {
   dark?: boolean;
   seed?: BirthFormValues | null;
+  savedRefreshKey?: number;
   onSuccess: (data: ChartDataPayload) => void;
   onSaved?: (item: SavedKundali) => void;
+  onLoadSaved?: (item: SavedKundali) => void;
   onError: (message: string) => void;
 }
 
-export function BirthInputForm({ dark, seed, onSuccess, onSaved, onError }: Props) {
+export function BirthInputForm({
+  dark,
+  seed,
+  savedRefreshKey,
+  onSuccess,
+  onSaved,
+  onLoadSaved,
+  onError,
+}: Props) {
   const { t } = useTranslations();
   const placePhotonRef = useRef<PlacePhotonFieldHandle>(null);
   const [savedId, setSavedId] = useState<string | undefined>(seed?.id);
@@ -76,6 +86,9 @@ export function BirthInputForm({ dark, seed, onSuccess, onSaved, onError }: Prop
   const [tz, setTz] = useState(seed?.tz ?? "5.5");
   const [family, setFamily] = useState(seed?.family ?? false);
   const [submitting, setSubmitting] = useState(false);
+  const [savedList, setSavedList] = useState<SavedKundali[]>([]);
+  const [selectedSavedId, setSelectedSavedId] = useState(seed?.id ?? "");
+  const [loadingSaved, setLoadingSaved] = useState(false);
 
   useEffect(() => {
     if (!seed) return;
@@ -89,7 +102,32 @@ export function BirthInputForm({ dark, seed, onSuccess, onSaved, onError }: Prop
     setLng(seed.lng);
     setTz(seed.tz);
     setFamily(seed.family);
+    setSelectedSavedId(seed.id ?? "");
   }, [seed]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/kundalis")
+      .then(async (res) => {
+        const json = (await res.json()) as {
+          kundalis?: SavedKundali[];
+          error?: string;
+        };
+        if (!res.ok) {
+          throw new Error(json.error || `Request failed (${res.status})`);
+        }
+        return json.kundalis ?? [];
+      })
+      .then((items) => {
+        if (!cancelled) setSavedList(items);
+      })
+      .catch(() => {
+        if (!cancelled) setSavedList([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [savedRefreshKey]);
 
   const text = {
     name: t("birthForm.name"),
@@ -111,6 +149,9 @@ export function BirthInputForm({ dark, seed, onSuccess, onSaved, onError }: Prop
     computing: t("birthForm.computing"),
     family: t("birthForm.family"),
     familyHint: t("birthForm.familyHint"),
+    loadSaved: t("birthForm.loadSaved"),
+    loadSavedPlaceholder: t("birthForm.loadSavedPlaceholder"),
+    loadingSaved: t("birthForm.loadingSaved"),
     invalidDateTime: t("birthForm.invalidDateTime"),
     invalidNumbers: t("birthForm.invalidNumbers"),
     networkError: t("birthForm.networkError"),
@@ -144,6 +185,13 @@ export function BirthInputForm({ dark, seed, onSuccess, onSaved, onError }: Prop
     setLat(String(p.lat));
     setLng(String(p.lng));
     setTz(String(p.tz));
+  }
+
+  function handleLoadSaved() {
+    const item = savedList.find((entry) => entry.id === selectedSavedId);
+    if (!item || !onLoadSaved) return;
+    setLoadingSaved(true);
+    onLoadSaved(item);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -259,6 +307,32 @@ export function BirthInputForm({ dark, seed, onSuccess, onSaved, onError }: Prop
       className={`${styles.form} ${dark ? styles.formDark : ""}`}
       onSubmit={handleSubmit}
     >
+      <div className={styles.loadRow}>
+        <label className={styles.field}>
+          <span>{text.loadSaved}</span>
+          <select
+            value={selectedSavedId}
+            onChange={(e) => setSelectedSavedId(e.target.value)}
+          >
+            <option value="">{text.loadSavedPlaceholder}</option>
+            {savedList.map((item) => (
+              <option key={item.id} value={item.id}>
+                {formatSavedKundaliLabel(item)}
+                {item.family ? " ★" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className={styles.submit}
+          disabled={!selectedSavedId || loadingSaved || submitting}
+          onClick={handleLoadSaved}
+        >
+          {loadingSaved ? text.loadingSaved : text.loadSaved}
+        </button>
+      </div>
+
       <div className={styles.row}>
         <label className={styles.field}>
           <span>{text.name}</span>
