@@ -133,3 +133,29 @@
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+.familyCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.familyCheck input {
+  margin-top: 0.2rem;
+}
+
+.familyCheck span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.familyCheck em {
+  font-style: normal;
+  color: var(--form-muted, #64748b);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
