@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
-import { spawn } from "child_process";
 import { join } from "path";
+import { runPython } from "@/lib/runPython";
 
 type BirthInput = {
   dob: string; // YYYY-MM-DD
@@ -138,29 +138,12 @@ async function runSemanticPython(payload: Record<string, unknown>): Promise<unkn
   const env = { ...process.env, PYTHONPATH: `${semanticCwd}${process.env.PYTHONPATH ? `:${process.env.PYTHONPATH}` : ""}` };
 
   const stdinJson = JSON.stringify(payload);
-  const result = await new Promise<{ ok: boolean; stdout: string; stderr: string; code: number | null }>((resolve) => {
-    const child = spawn(pythonBin, ["-m", "semantic_engine.semantic_api"], {
-      cwd: semanticCwd,
-      stdio: ["pipe", "pipe", "pipe"],
-      env,
-    });
-    let stdout = "";
-    let stderr = "";
-    let settled = false;
-    const finish = (ok: boolean, code: number | null) => {
-      if (settled) return;
-      settled = true;
-      resolve({ ok, stdout, stderr, code });
-    };
-    child.stdout?.on("data", (c: Buffer) => (stdout += c.toString("utf8")));
-    child.stderr?.on("data", (c: Buffer) => (stderr += c.toString("utf8")));
-    child.on("close", (code) => finish(code === 0, code));
-    child.on("error", (err) => {
-      stderr += String(err);
-      finish(false, -1);
-    });
-    child.stdin?.write(stdinJson, "utf8");
-    child.stdin?.end();
+  const result = await runPython({
+    args: [pythonBin, "-m", "semantic_engine.semantic_api"],
+    cwd: semanticCwd,
+    input: stdinJson,
+    env,
+    timeoutMs: 60_000,
   });
 
   if (!result.ok) {

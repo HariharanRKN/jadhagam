@@ -17,12 +17,17 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-warnings.filterwarnings("ignore")
-with contextlib.redirect_stdout(io.StringIO()):
-    from jhora import const
-    from jhora.horoscope.chart import charts
-    from jhora.panchanga import drik
-    from horoscope import PLANET_NAMES, _planet_table_rows, _transit_julday
+PLANET_NAMES = {
+    0: "Sun",
+    1: "Moon",
+    2: "Mars",
+    3: "Mercury",
+    4: "Jupiter",
+    5: "Venus",
+    6: "Saturn",
+    7: "Rahu",
+    8: "Ketu",
+}
 
 IST = timezone(timedelta(hours=5, minutes=30), name="IST")
 SNAPSHOT_TIME_IST = time(12, 0, 0)
@@ -121,6 +126,16 @@ def snapshot_datetime_ist(day: date) -> datetime:
 
 
 def compute_snapshot(day: date) -> SnapshotRow:
+    # Import PyJHora only when a date is missing from SQLite. Loading jhora.utils
+    # (numpy + timezonefinder + geopy) on every history CLI call blows past
+    # Render free-tier RAM even for a single-row lookup.
+    warnings.filterwarnings("ignore")
+    with contextlib.redirect_stdout(io.StringIO()):
+        from jhora import const
+        from jhora.horoscope.chart import charts
+        from jhora.panchanga import drik
+        from horoscope import _planet_table_rows, _transit_julday
+
     drik.set_ayanamsa_mode("LAHIRI")
     const.use_rahu_ketu_as_true_nodes = False
 

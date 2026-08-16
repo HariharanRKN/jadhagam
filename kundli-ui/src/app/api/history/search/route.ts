@@ -1,5 +1,5 @@
-import { spawn } from "child_process";
 import { join } from "path";
+import { runPython } from "@/lib/runPython";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
@@ -25,32 +25,10 @@ async function runHistoryCommand(args: string[]) {
   const script = scriptPath();
   const cwd = IS_PROD ? "/app" : join(process.cwd(), "..");
   const py = pythonBin();
-
-  return await new Promise<{ ok: boolean; stdout: string; stderr: string; code: number | null }>((resolve) => {
-    const child = spawn(py, [script, "--db", dbPath(), ...args], {
-      cwd,
-      stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env },
-    });
-    let stdout = "";
-    let stderr = "";
-    let settled = false;
-    const finish = (ok: boolean, code: number | null) => {
-      if (settled) return;
-      settled = true;
-      resolve({ ok, stdout, stderr, code });
-    };
-    child.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString("utf8");
-    });
-    child.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString("utf8");
-    });
-    child.on("close", (code) => finish(code === 0, code));
-    child.on("error", (err) => {
-      stderr += String(err);
-      finish(false, -1);
-    });
+  return runPython({
+    args: [py, script, "--db", dbPath(), ...args],
+    cwd,
+    timeoutMs: 60_000,
   });
 }
 
