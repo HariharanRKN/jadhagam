@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SouthIndianChart } from "@/components/SouthIndianChart/SouthIndianChart";
 import { BirthInputForm } from "@/components/BirthInputForm";
 import { BirthTimeIdentifier } from "@/components/BirthTimeIdentifier";
+import { SavedKundaliList } from "@/components/SavedKundaliList";
 import { PlacePhotonField } from "@/components/PlacePhotonField";
 import { PlanetaryTableTamil } from "@/components/tables/PlanetaryTableTamil";
 import { DashaBhuktiTableTamil } from "@/components/tables/DashaBhuktiTableTamil";
@@ -22,6 +23,8 @@ import {
 import type { MarriageBhuktiWindow, MarriagePrediction } from "@/lib/prediction/events";
 import { isoDateKey } from "@/lib/isoDate";
 import type { ChartDataPayload } from "@/types/chartData";
+import type { SavedKundali } from "@/lib/kundalis/types";
+import { savedKundaliToFormValues } from "@/lib/kundalis/client";
 import styles from "./page.module.css";
 
 type TrackerTab = "kundli" | "kochar" | "marriage" | "family" | "birthTime";
@@ -64,6 +67,7 @@ type MarriageAnalysisRow = {
 };
 
 type FamilyFormState = {
+  savedId?: string;
   name: string;
   birthDate: string;
   birthTime: string;
@@ -231,7 +235,23 @@ function createFamilyFormState(index: number): FamilyFormState {
   ] as const;
 
   return {
-    ...defaults[index],
+    ...(defaults[index] ?? defaults[1]),
+    loading: false,
+    error: null,
+    result: null,
+  };
+}
+
+function familyFormFromSaved(item: SavedKundali): FamilyFormState {
+  const values = savedKundaliToFormValues(item);
+  return {
+    savedId: item.id,
+    name: values.name,
+    birthDate: values.birthDate,
+    birthTime: values.birthTime,
+    placeName: values.placeName,
+    lat: values.lat,
+    lng: values.lng,
     loading: false,
     error: null,
     result: null,
@@ -274,6 +294,12 @@ export default function Home() {
   const [familyForms, setFamilyForms] = useState<FamilyFormState[]>(() =>
     Array.from({ length: 4 }, (_, index) => createFamilyFormState(index))
   );
+  const [formSeed, setFormSeed] = useState<ReturnType<
+    typeof savedKundaliToFormValues
+  > | null>(null);
+  const [seedNonce, setSeedNonce] = useState(0);
+  const [savedRefreshKey, setSavedRefreshKey] = useState(0);
+  const [familyHydrated, setFamilyHydrated] = useState(false);
 
   const theme = dark ? "dark" : "light";
 
@@ -384,6 +410,33 @@ export default function Home() {
       cancelled = true;
     };
   }, [familyInsightDate]);
+
+  useEffect(() => {
+    if (activeTab !== "family" || familyHydrated) return;
+    let cancelled = false;
+    fetch("/api/kundalis?family=true")
+      .then(async (res) => {
+        const json = (await res.json()) as {
+          kundalis?: SavedKundali[];
+          error?: string;
+        };
+        if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
+        return json.kundalis ?? [];
+      })
+      .then((kundalis) => {
+        if (cancelled || !kundalis.length) return;
+        setFamilyForms(kundalis.map((item) => familyFormFromSaved(item)));
+      })
+      .catch(() => {
+        /* keep the default family slots if the store is empty or unavailable */
+      })
+      .finally(() => {
+        if (!cancelled) setFamilyHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, familyHydrated]);
 
   useEffect(() => {
     let cancelled = false;
@@ -669,10 +722,32 @@ export default function Home() {
         throw new Error(json.detail || json.error || `Request failed (${res.status})`);
       }
 
+      let savedId = form.savedId;
+      try {
+        const saveRes = await fetch("/api/kundalis", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: form.savedId,
+            family: true,
+            name: form.name.trim() || undefined,
+            birth: payload.birth,
+            place: payload.place,
+          }),
+        });
+        const savedJson = (await saveRes.json()) as { kundali?: SavedKundali };
+        if (saveRes.ok && savedJson.kundali) {
+          savedId = savedJson.kundali.id;
+          setSavedRefreshKey((n) => n + 1);
+        }
+      } catch {
+        /* chart still shows even if the family save fails */
+      }
+
       setFamilyForms((current) =>
         current.map((item, itemIndex) =>
           itemIndex === index
-            ? { ...item, loading: false, error: null, result: json }
+            ? { ...item, savedId, loading: false, error: null, result: json }
             : item
         )
       );
@@ -689,6 +764,62 @@ export default function Home() {
             : item
         )
       );
+    }
+  }
+
+  async function loadSavedKundali(item: SavedKundali) {
+    const values = savedKundaliToFormValues(item);
+    setFormSeed(values);
+    setSeedNonce((n) => n + 1);
+    setActiveTab("kundli");
+    setApiError(null);
+    try {
+      const res = await fetch("/api/horoscope", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: item.name ?? undefined,
+          gender: item.gender ?? undefined,
+          birth: item.birth,
+          place: item.place,
+          transit: null,
+        }),
+      });
+      const json = (await res.json()) as ChartDataPayload & { error?: string };
+      if (!res.ok) {
+        throw new Error(json.error || `Request failed (${res.status})`);
+      }
+      setData(json);
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : t("home.savedLoadError"));
+    }
+  }
+
+  async function fillFromSavedFamily() {
+    try {
+      const res = await fetch("/api/kundalis?family=true");
+      const json = (await res.json()) as {
+        kundalis?: SavedKundali[];
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(json.error || `Request failed (${res.status})`);
+      }
+      const kundalis = json.kundalis ?? [];
+      if (!kundalis.length) return;
+      setFamilyForms(kundalis.map((item) => familyFormFromSaved(item)));
+      setFamilyHydrated(true);
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : t("home.savedLoadError"));
+    }
+  }
+
+  async function computeAllFamily() {
+    for (let index = 0; index < familyForms.length; index += 1) {
+      const form = familyForms[index];
+      if (form.birthDate && form.birthTime && form.placeName.trim()) {
+        await computeFamilyChart(index);
+      }
     }
   }
 
@@ -733,12 +864,21 @@ export default function Home() {
         </button>
       </header>
 
-      <BirthInputForm
+      <SavedKundaliList
         dark={dark}
+        refreshKey={savedRefreshKey}
+        onLoad={(item) => void loadSavedKundali(item)}
+      />
+
+      <BirthInputForm
+        key={seedNonce}
+        dark={dark}
+        seed={formSeed}
         onSuccess={(payload) => {
           setData(payload);
           setApiError(null);
         }}
+        onSaved={() => setSavedRefreshKey((n) => n + 1)}
         onError={(msg) => setApiError(msg || null)}
       />
 
@@ -1251,6 +1391,34 @@ export default function Home() {
             <div className={styles.sectionHeader}>
               <h2>{t("home.familyInputsTitle")}</h2>
               <p>{t("home.familyInputsDesc")}</p>
+            </div>
+            <div className={styles.familyToolbar}>
+              <button
+                type="button"
+                className={styles.computeBtn}
+                onClick={() => void fillFromSavedFamily()}
+              >
+                {t("home.loadSavedFamily")}
+              </button>
+              <button
+                type="button"
+                className={styles.computeBtn}
+                onClick={() => void computeAllFamily()}
+              >
+                {t("home.computeAllFamily")}
+              </button>
+              <button
+                type="button"
+                className={styles.computeBtn}
+                onClick={() =>
+                  setFamilyForms((current) => [
+                    ...current,
+                    createFamilyFormState(current.length),
+                  ])
+                }
+              >
+                {t("home.addFamilyProfile")}
+              </button>
             </div>
             <div className={styles.familyGrid}>
               {familyForms.map((form, index) => (

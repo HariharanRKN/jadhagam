@@ -18,6 +18,10 @@ export const birthForm = {
       "Birth date and time are civil time at the chosen place. Selecting a place fills latitude, longitude, and UTC offset through this app's lookup services.",
     submit: "Compute chart",
     computing: "Computing…",
+    family: "Family kundali",
+    familyHint:
+      "Mark this chart as family. Family kundalis stay on the server and are used for later test runs with real time periods.",
+    saveFailed: "Chart computed, but saving on the server failed.",
     invalidDateTime: "Enter a valid birth date and time.",
     invalidNumbers: "Latitude, longitude, and timezone must be numbers.",
     networkError: "Network error",
@@ -45,6 +49,10 @@ export const birthForm = {
       "பிறந்த தேதி மற்றும் நேரம், தேர்ந்தெடுத்த இடத்தின் உள்ளூர் நேரப்படி இருக்க வேண்டும். இடம் தேர்வு செய்தால் அட்சரேகை, தீர்க்கரேகை மற்றும் UTC offset நிரம்பும்.",
     submit: "ஜாதகம் காண்க",
     computing: "கணக்கிடப்படுகிறது…",
+    family: "குடும்ப ஜாதகம்",
+    familyHint:
+      "இந்த ஜாதகத்தை குடும்பமாக குறிக்கவும். குடும்ப ஜாதகங்கள் சேவையகத்தில் சேமிக்கப்பட்டு பின்னர் உண்மையான காலங்களுடன் சோதனைக்கு பயன்படும்.",
+    saveFailed: "ஜாதகம் கணக்கிடப்பட்டது, ஆனால் சேவையகத்தில் சேமிக்க முடியவில்லை.",
     invalidDateTime: "சரியான பிறந்த தேதி மற்றும் நேரத்தை உள்ளிடவும்.",
     invalidNumbers:
       "அட்சரேகை, தீர்க்கரேகை, மற்றும் நேர மண்டலம் எண் மதிப்பாக இருக்க வேண்டும்.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { ChartDataPayload } from "@/types/chartData";
 import styles from "@/app/birthForm.module.css";
 import {
@@ -9,6 +9,9 @@ import {
 } from "@/components/PlacePhotonField";
 import { fetchUtcOffsetHours } from "@/lib/timezoneClient";
 import { useTranslations } from "@/i18n/useTranslations";
+import type { BirthFormValues } from "@/lib/kundalis/client";
+import { formValuesToSavePayload } from "@/lib/kundalis/client";
+import type { SavedKundali } from "@/lib/kundalis/types";
 
 const PLACE_PRESETS = [
   {
@@ -53,22 +56,40 @@ const DEFAULT_TIME = "17:00";
 
 interface Props {
   dark?: boolean;
+  seed?: BirthFormValues | null;
   onSuccess: (data: ChartDataPayload) => void;
+  onSaved?: (item: SavedKundali) => void;
   onError: (message: string) => void;
 }
 
-export function BirthInputForm({ dark, onSuccess, onError }: Props) {
+export function BirthInputForm({ dark, seed, onSuccess, onSaved, onError }: Props) {
   const { t } = useTranslations();
   const placePhotonRef = useRef<PlacePhotonFieldHandle>(null);
-  const [name, setName] = useState("");
-  const [gender, setGender] = useState("");
-  const [birthDate, setBirthDate] = useState(DEFAULT_DATE);
-  const [birthTime, setBirthTime] = useState(DEFAULT_TIME);
-  const [placeName, setPlaceName] = useState("Pondicherry, IN");
-  const [lat, setLat] = useState("11.9416");
-  const [lng, setLng] = useState("79.8083");
-  const [tz, setTz] = useState("5.5");
+  const [savedId, setSavedId] = useState<string | undefined>(seed?.id);
+  const [name, setName] = useState(seed?.name ?? "");
+  const [gender, setGender] = useState(seed?.gender ?? "");
+  const [birthDate, setBirthDate] = useState(seed?.birthDate ?? DEFAULT_DATE);
+  const [birthTime, setBirthTime] = useState(seed?.birthTime ?? DEFAULT_TIME);
+  const [placeName, setPlaceName] = useState(seed?.placeName ?? "Pondicherry, IN");
+  const [lat, setLat] = useState(seed?.lat ?? "11.9416");
+  const [lng, setLng] = useState(seed?.lng ?? "79.8083");
+  const [tz, setTz] = useState(seed?.tz ?? "5.5");
+  const [family, setFamily] = useState(seed?.family ?? false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!seed) return;
+    setSavedId(seed.id);
+    setName(seed.name);
+    setGender(seed.gender);
+    setBirthDate(seed.birthDate);
+    setBirthTime(seed.birthTime);
+    setPlaceName(seed.placeName);
+    setLat(seed.lat);
+    setLng(seed.lng);
+    setTz(seed.tz);
+    setFamily(seed.family);
+  }, [seed]);
 
   const text = {
     name: t("birthForm.name"),
@@ -88,6 +109,8 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
     hint: t("birthForm.hint"),
     submit: t("birthForm.submit"),
     computing: t("birthForm.computing"),
+    family: t("birthForm.family"),
+    familyHint: t("birthForm.familyHint"),
     invalidDateTime: t("birthForm.invalidDateTime"),
     invalidNumbers: t("birthForm.invalidNumbers"),
     networkError: t("birthForm.networkError"),
@@ -186,6 +209,44 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
         return;
       }
       onSuccess(json as ChartDataPayload);
+
+      const values: BirthFormValues = {
+        id: savedId,
+        name: name.trim(),
+        gender,
+        birthDate,
+        birthTime,
+        placeName: resolvedPlace,
+        lat: String(latN),
+        lng: String(lngN),
+        tz: String(tzN),
+        family,
+      };
+      try {
+        const saveRes = await fetch("/api/kundalis", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formValuesToSavePayload(values)),
+        });
+        const savedJson = (await saveRes.json()) as {
+          kundali?: SavedKundali;
+          error?: string;
+        };
+        if (saveRes.ok && savedJson.kundali) {
+          setSavedId(savedJson.kundali.id);
+          onSaved?.(savedJson.kundali);
+        } else {
+          onError(
+            typeof savedJson.error === "string"
+              ? savedJson.error
+              : t("birthForm.saveFailed")
+          );
+        }
+      } catch (saveErr) {
+        onError(
+          saveErr instanceof Error ? saveErr.message : t("birthForm.saveFailed")
+        );
+      }
     } catch (err) {
       onError(err instanceof Error ? err.message : text.networkError);
     } finally {
@@ -308,6 +369,18 @@ export function BirthInputForm({ dark, onSuccess, onError }: Props) {
       </div>
 
       <p className={styles.hint}>{text.hint}</p>
+
+      <label className={styles.familyCheck}>
+        <input
+          type="checkbox"
+          checked={family}
+          onChange={(e) => setFamily(e.target.checked)}
+        />
+        <span>
+          <strong>{text.family}</strong>
+          <em>{text.familyHint}</em>
+        </span>
+      </label>
 
       <button
         type="submit"

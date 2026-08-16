@@ -40,6 +40,7 @@ COPY --from=builder /app/kundli-ui/public ./public
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV KUNDALI_STORE_PATH=/app/data/saved_kundalis.json
 # Render free web services are 512MB. Leave headroom for one PyJHora child.
 ENV NODE_OPTIONS=--max-old-space-size=192
 ENV MALLOC_ARENA_MAX=2
