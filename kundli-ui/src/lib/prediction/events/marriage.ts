@@ -55,14 +55,14 @@ type GuruKocharReading = {
   notes: string[];
 };
 
-type PeriodMatchRole =
+export type PeriodMatchRole =
   | "3rd-lord"
   | "7th-lord"
   | "11th-lord"
   | "shukra"
   | "guru";
 
-type MarriageSequenceRow = {
+export type MarriageSequenceRow = {
   maha: number;
   bhukti: number;
   antara: number;
@@ -91,6 +91,7 @@ type MarriagePeriodSequence = {
   }>;
   current: MarriageSequenceRow | null;
   upcoming: MarriageSequenceRow[];
+  notableWindows: MarriageSequenceRow[];
   summary: string;
 };
 
@@ -364,7 +365,8 @@ function roleWeight(role: PeriodMatchRole): number {
 function buildMarriageSequence(
   chart: ChartDataPayload,
   lordMap: Record<MarriageHouseNumber, number>,
-  lang: MarriageLang
+  lang: MarriageLang,
+  asOfIso?: string
 ): MarriagePeriodSequence {
   const marriagePlanetSet: MarriagePeriodSequence["marriagePlanetSet"] = [
     {
@@ -446,12 +448,31 @@ function buildMarriageSequence(
     };
   });
 
-  const currentIso = (chart.transit.computedAt ?? new Date().toISOString()).slice(0, 10);
+  const currentIso = (
+    asOfIso ??
+    chart.transit.computedAt ??
+    new Date().toISOString()
+  ).slice(0, 10);
   const current = latestStartedRow(sequenceRows, currentIso);
   const upcoming = sequenceRows
     .filter((row) => row.start.slice(0, 10) > currentIso)
     .sort((a, b) => b.score - a.score || a.start.localeCompare(b.start))
     .slice(0, 6);
+
+  const notablePast = sequenceRows
+    .filter(
+      (row) =>
+        row.verdict !== "weak" && row.start.slice(0, 10) <= currentIso
+    )
+    .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }))
+    .slice(-8);
+  const notableFuture = sequenceRows
+    .filter(
+      (row) => row.verdict !== "weak" && row.start.slice(0, 10) > currentIso
+    )
+    .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }))
+    .slice(0, 12);
+  const notableWindows = [...notablePast, ...notableFuture];
 
   const summary = current
     ? mp.periodSummaryCurrent(
@@ -466,6 +487,7 @@ function buildMarriageSequence(
     marriagePlanetSet,
     current,
     upcoming,
+    notableWindows,
     summary,
   };
 }
@@ -493,7 +515,8 @@ function buildGuruKochar(chart: ChartDataPayload, lang: MarriageLang): GuruKocha
 
 export function buildMarriagePrediction(
   chart: ChartDataPayload,
-  lang: MarriageLang = "en"
+  lang: MarriageLang = "en",
+  asOfIso?: string
 ): MarriagePrediction {
   const houseBundle = buildAllHouseAnalyses(chart, lang);
   const marriageHouses = ([3, 7, 11] as const).map((houseNumber) =>
@@ -517,7 +540,7 @@ export function buildMarriagePrediction(
   const shukraKarakathuva = buildPlacementReading(chart, shukraRow, shukraLabel, lang);
   const guruKarakathuva = buildPlacementReading(chart, guruRow, guruLabel, lang);
   const guruKochar = buildGuruKochar(chart, lang);
-  const periodSequence = buildMarriageSequence(chart, lordMap, lang);
+  const periodSequence = buildMarriageSequence(chart, lordMap, lang, asOfIso);
 
   const houseAverage =
     marriageHouses.reduce((sum, house) => sum + house.aggregateScore, 0) / marriageHouses.length;
