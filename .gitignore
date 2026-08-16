@@ -1,6 +1,8 @@
 .DS_Store
 data/saved_kundalis.json
 data/saved_kundalis.json.*
+data/saved_kundalis.sqlite
+data/saved_kundalis.sqlite-*
 .env
 .env.*
 !.env.example
