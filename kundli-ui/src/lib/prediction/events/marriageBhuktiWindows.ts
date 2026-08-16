@@ -155,24 +155,26 @@ function dashaBaseWindow(row: MarriageBhuktiWindow): MarriageBhuktiWindow {
   };
 }
 
+function kocharRank(slice: MarriageBhuktiWindow): number {
+  return slice.kocharScore ?? -1;
+}
+
 export function narrowSlicesByKochar(
   original: MarriageBhuktiWindow,
   scoredSlices: MarriageBhuktiWindow[]
 ): MarriageBhuktiWindow[] {
   const withSky = scoredSlices.filter((slice) => slice.kocharApplied);
   const pool = withSky.length ? withSky : scoredSlices;
-  const winners = selectNearTopByScore(pool, (slice) => slice.kocharScore ?? -1);
-  if (!winners.length) {
-    return [
-      {
-        ...original,
-        bhuktiStart: original.bhuktiStart ?? original.start,
-        bhuktiEnd: original.bhuktiEnd ?? original.end,
-      },
-    ];
-  }
-  const topScore = winners[0].kocharScore ?? 0;
-  const allEqual = winners.every((slice) => (slice.kocharScore ?? 0) === topScore);
+  const fallback = [
+    {
+      ...original,
+      bhuktiStart: original.bhuktiStart ?? original.start,
+      bhuktiEnd: original.bhuktiEnd ?? original.end,
+    },
+  ];
+  if (!pool.length) return fallback;
+  const winners = selectNearTopByScore(pool, kocharRank);
+  if (!winners.length) return fallback;
   const restoreFullPeriod = (row: MarriageBhuktiWindow): MarriageBhuktiWindow => ({
     ...row,
     start: original.bhuktiStart ?? original.start,
@@ -180,10 +182,9 @@ export function narrowSlicesByKochar(
     bhuktiStart: original.bhuktiStart ?? original.start,
     bhuktiEnd: original.bhuktiEnd ?? original.end,
   });
-  if (winners.length === 1 && pool.length > 1) {
-    return winners;
-  }
-  if (allEqual || winners.length <= 1) {
+  const firstRank = kocharRank(pool[0]);
+  const everySliceTied = pool.every((slice) => kocharRank(slice) === firstRank);
+  if (everySliceTied) {
     return [restoreFullPeriod(winners[0])];
   }
   return [...winners].sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }));
@@ -373,34 +374,48 @@ function snapshotsByIsoDate(
   return normalized;
 }
 
+export function scoreMoonKocharSlices(
+  row: MarriageBhuktiWindow,
+  natalPlanets: ChartDataPayload["natalPlanets"],
+  snapshotsByDate: Map<string, TransitRasiPlanet[]>,
+  lang: MarriageLang = "en"
+): { base: MarriageBhuktiWindow; scoredSlices: MarriageBhuktiWindow[] } {
+  const byDate = snapshotsByIsoDate(snapshotsByDate);
+  const periodStart = isoDateKey(row.bhuktiStart ?? row.start);
+  const periodEnd = row.bhuktiEnd ?? row.end;
+  const base = {
+    ...dashaBaseWindow(row),
+    bhuktiStart: periodStart,
+    bhuktiEnd: periodEnd,
+    start: periodStart,
+    end: periodEnd,
+  };
+  const scoredSlices = listSixMonthSlices(periodStart, periodEnd).map((slice) => {
+    const sliceRow: MarriageBhuktiWindow = {
+      ...base,
+      start: slice.start,
+      end: slice.end,
+    };
+    const transitPlanets = byDate.get(slice.start);
+    if (!transitPlanets?.length) return sliceRow;
+    return applyMoonKocharToBhuktiWindow(sliceRow, natalPlanets, transitPlanets, lang);
+  });
+  return { base, scoredSlices };
+}
+
 export function overlayMoonKocharOnWindows(
   windows: MarriageBhuktiWindow[],
   natalPlanets: ChartDataPayload["natalPlanets"],
   snapshotsByDate: Map<string, TransitRasiPlanet[]>,
   lang: MarriageLang = "en"
 ): MarriageBhuktiWindow[] {
-  const byDate = snapshotsByIsoDate(snapshotsByDate);
   return windows.flatMap((row) => {
-    const periodStart = isoDateKey(row.bhuktiStart ?? row.start);
-    const periodEnd = row.bhuktiEnd ?? row.end;
-    const base = {
-      ...dashaBaseWindow(row),
-      bhuktiStart: periodStart,
-      bhuktiEnd: periodEnd,
-      start: periodStart,
-      end: periodEnd,
-    };
-    const slices = listSixMonthSlices(periodStart, periodEnd);
-    const scoredSlices = slices.map((slice) => {
-      const sliceRow: MarriageBhuktiWindow = {
-        ...base,
-        start: slice.start,
-        end: slice.end,
-      };
-      const transitPlanets = byDate.get(slice.start);
-      if (!transitPlanets?.length) return sliceRow;
-      return applyMoonKocharToBhuktiWindow(sliceRow, natalPlanets, transitPlanets, lang);
-    });
+    const { base, scoredSlices } = scoreMoonKocharSlices(
+      row,
+      natalPlanets,
+      snapshotsByDate,
+      lang
+    );
     return narrowSlicesByKochar(base, scoredSlices);
   });
 }

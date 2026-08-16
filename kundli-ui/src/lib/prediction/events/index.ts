@@ -11,6 +11,7 @@ export {
   listMarriageBhuktiWindows,
   listSixMonthSlices,
   overlayMoonKocharOnWindows,
+  scoreMoonKocharSlices,
   selectNearTopByScore,
   MARRIAGE_ADULT_AGE_YEARS,
   MARRIAGE_MAX_AGE_YEARS,

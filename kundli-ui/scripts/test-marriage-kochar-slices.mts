@@ -115,6 +115,32 @@ assertEqual(tiedResult.length, 1, "identical scores collapse to the full bhukti"
 assertEqual(tiedResult[0].start, "2020-01-01", "tied result keeps bhukti start");
 assertEqual(tiedResult[0].end, "2021-07-01", "tied result keeps bhukti end");
 
+const fiveYear = windowStub({
+  start: "1981-02-27",
+  end: "1985-06-19",
+  bhuktiStart: "1981-02-27",
+  bhuktiEnd: "1985-06-19",
+});
+const fiveYearSlices = [
+  windowStub({ start: "1981-02-27", end: "1981-08-27", kocharScore: 0 }),
+  windowStub({ start: "1981-08-27", end: "1982-02-27", kocharScore: 0 }),
+  windowStub({ start: "1982-02-27", end: "1982-08-27", kocharScore: 42 }),
+  windowStub({ start: "1982-08-27", end: "1983-02-27", kocharScore: 42 }),
+  windowStub({ start: "1983-02-27", end: "1983-08-27", kocharScore: 0 }),
+  windowStub({ start: "1983-08-27", end: "1984-02-27", kocharScore: 16 }),
+  windowStub({ start: "1984-02-27", end: "1984-08-27", kocharScore: 0 }),
+  windowStub({ start: "1984-08-27", end: "1985-02-27", kocharScore: 0 }),
+  windowStub({ start: "1985-02-27", end: "1985-06-19", kocharScore: 0 }),
+];
+const fiveYearResult = narrowSlicesByKochar(fiveYear, fiveYearSlices);
+assertEqual(
+  fiveYearResult.map((row) => row.start),
+  ["1982-02-27", "1982-08-27"],
+  "tied peak slices stay 6-month windows; weaker years are dropped"
+);
+assertEqual(fiveYearResult[0].end, "1982-08-27", "first peak keeps its slice end");
+assertEqual(fiveYearResult[1].end, "1983-02-27", "second peak keeps its slice end");
+
 const sampleDates = collectMarriageKocharSampleDates([original]);
 assertEqual(
   sampleDates,
