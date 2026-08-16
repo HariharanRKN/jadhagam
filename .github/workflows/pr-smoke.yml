@@ -1,0 +1,61 @@
+name: PR smoke
+
+on:
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  smoke:
+    name: Engine and API smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HOROSCOPE_PYTHON: ${{ github.workspace }}/.venv/bin/python
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python deps
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
+      - name: Engine smoke
+        run: .venv/bin/python scripts/smoke_pr.py --engine-only
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: kundli-ui/package-lock.json
+
+      - name: Install UI deps and build
+        working-directory: kundli-ui
+        run: |
+          npm ci
+          npm run build
+
+      # next start is incompatible with output: standalone. Dev mode uses
+      # repo-relative Python paths (../horoscope.py) instead of /app/...
+      - name: Start Next.js
+        working-directory: kundli-ui
+        run: |
+          npm run dev &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3000 >/dev/null; then
+              echo "Next.js is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Next.js did not become ready on :3000"
+          exit 1
+
+      - name: HTTP smoke
+        run: .venv/bin/python scripts/smoke_pr.py --base-url http://127.0.0.1:3000

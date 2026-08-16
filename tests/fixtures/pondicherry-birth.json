@@ -1,0 +1,24 @@
+{
+  "name": "Smoke",
+  "gender": "male",
+  "birth": {
+    "year": 1994,
+    "month": 5,
+    "day": 10,
+    "hour": 17,
+    "minute": 0,
+    "second": 0
+  },
+  "place": {
+    "name": "Pondicherry, IN",
+    "lat": 11.9416,
+    "lng": 79.8083,
+    "tz": 5.5
+  },
+  "transit": null,
+  "dob": "1994-05-10",
+  "tob": "17:00:00",
+  "placeQuery": "Pondicherry",
+  "questionText": "When is marriage likely?",
+  "eventOverride": "marriage"
+}
