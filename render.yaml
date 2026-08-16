@@ -1,5 +1,8 @@
 # Render Blueprint: https://render.com/docs/blueprint-spec
 # Connect private GitHub repo → New Blueprint → select render.yaml
+#
+# Free instances sleep and lose local files. Saved kundalis persist only if you
+# set KUNDALI_DB_URL and KUNDALI_DB_AUTH_TOKEN (Turso) in the Render dashboard.
 
 services:
   - type: web
@@ -8,10 +11,6 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/health
-    disk:
-      name: kundli-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -19,5 +18,7 @@ services:
         value: --max-old-space-size=192
       - key: MALLOC_ARENA_MAX
         value: "2"
-      - key: KUNDALI_DB_PATH
-        value: /var/data/saved_kundalis.sqlite
+      - key: KUNDALI_DB_URL
+        sync: false
+      - key: KUNDALI_DB_AUTH_TOKEN
+        sync: false

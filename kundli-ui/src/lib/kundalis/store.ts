@@ -1,8 +1,13 @@
-import { mkdir, readFile, rename } from "fs/promises";
-import { dirname, join } from "path";
+import { readFile, rename } from "fs/promises";
+import { join } from "path";
 import { randomUUID } from "crypto";
-import { DatabaseSync } from "node:sqlite";
 import type { SavedKundali, SavedKundaliInput } from "./types";
+import {
+  dbPath,
+  initKundaliDb,
+  type KundaliDb,
+  type QueryRow,
+} from "./db";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
@@ -26,8 +31,8 @@ type KundaliRow = {
   updated_at: string;
 };
 
-let db: DatabaseSync | null = null;
-let opening: Promise<DatabaseSync> | null = null;
+let db: KundaliDb | null = null;
+let opening: Promise<KundaliDb> | null = null;
 let writeChain: Promise<unknown> = Promise.resolve();
 
 function withLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -39,14 +44,7 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
-export function dbPath() {
-  return (
-    process.env.KUNDALI_DB_PATH ??
-    (IS_PROD
-      ? "/var/data/saved_kundalis.sqlite"
-      : join(process.cwd(), "..", "data", "saved_kundalis.sqlite"))
-  );
-}
+export { dbPath };
 
 function jsonStorePath() {
   return (
@@ -143,6 +141,38 @@ function parseJsonStore(raw: string): SavedKundali[] {
   }
 }
 
+function num(v: unknown, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function textOrNull(v: unknown) {
+  if (v == null || v === "") return null;
+  return String(v);
+}
+
+function asKundaliRow(row: QueryRow): KundaliRow {
+  return {
+    id: String(row.id),
+    family: num(row.family),
+    name: textOrNull(row.name),
+    gender: textOrNull(row.gender),
+    birth_year: num(row.birth_year),
+    birth_month: num(row.birth_month),
+    birth_day: num(row.birth_day),
+    birth_hour: num(row.birth_hour),
+    birth_minute: num(row.birth_minute),
+    birth_second: num(row.birth_second),
+    place_name: String(row.place_name ?? ""),
+    place_lat: num(row.place_lat),
+    place_lng: num(row.place_lng),
+    place_tz: num(row.place_tz),
+    fingerprint: String(row.fingerprint ?? ""),
+    created_at: String(row.created_at ?? ""),
+    updated_at: String(row.updated_at ?? ""),
+  };
+}
+
 function rowToKundali(row: KundaliRow): SavedKundali {
   return {
     id: row.id,
@@ -168,73 +198,68 @@ function rowToKundali(row: KundaliRow): SavedKundali {
   };
 }
 
-function insertRow(database: DatabaseSync, item: SavedKundali) {
-  database
-    .prepare(
-      `INSERT INTO kundalis (
+const INSERT_SQL = `INSERT INTO kundalis (
         id, family, name, gender,
         birth_year, birth_month, birth_day, birth_hour, birth_minute, birth_second,
         place_name, place_lat, place_lng, place_tz,
         fingerprint, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      item.id,
-      item.family ? 1 : 0,
-      item.name,
-      item.gender,
-      item.birth.year,
-      item.birth.month,
-      item.birth.day,
-      item.birth.hour,
-      item.birth.minute,
-      item.birth.second,
-      item.place.name,
-      item.place.lat,
-      item.place.lng,
-      item.place.tz,
-      fingerprint(item),
-      item.createdAt,
-      item.updatedAt
-    );
-}
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-function updateRow(database: DatabaseSync, item: SavedKundali) {
-  database
-    .prepare(
-      `UPDATE kundalis SET
+const UPDATE_SQL = `UPDATE kundalis SET
         family = ?, name = ?, gender = ?,
         birth_year = ?, birth_month = ?, birth_day = ?,
         birth_hour = ?, birth_minute = ?, birth_second = ?,
         place_name = ?, place_lat = ?, place_lng = ?, place_tz = ?,
         fingerprint = ?, updated_at = ?
-      WHERE id = ?`
-    )
-    .run(
-      item.family ? 1 : 0,
-      item.name,
-      item.gender,
-      item.birth.year,
-      item.birth.month,
-      item.birth.day,
-      item.birth.hour,
-      item.birth.minute,
-      item.birth.second,
-      item.place.name,
-      item.place.lat,
-      item.place.lng,
-      item.place.tz,
-      fingerprint(item),
-      item.updatedAt,
-      item.id
-    );
+      WHERE id = ?`;
+
+function insertArgs(item: SavedKundali) {
+  return [
+    item.id,
+    item.family ? 1 : 0,
+    item.name,
+    item.gender,
+    item.birth.year,
+    item.birth.month,
+    item.birth.day,
+    item.birth.hour,
+    item.birth.minute,
+    item.birth.second,
+    item.place.name,
+    item.place.lat,
+    item.place.lng,
+    item.place.tz,
+    fingerprint(item),
+    item.createdAt,
+    item.updatedAt,
+  ];
 }
 
-async function migrateJsonIfNeeded(database: DatabaseSync) {
-  const countRow = database.prepare("SELECT COUNT(*) AS n FROM kundalis").get() as
-    | { n: number }
-    | undefined;
-  if ((countRow?.n ?? 0) > 0) return;
+function updateArgs(item: SavedKundali) {
+  return [
+    item.family ? 1 : 0,
+    item.name,
+    item.gender,
+    item.birth.year,
+    item.birth.month,
+    item.birth.day,
+    item.birth.hour,
+    item.birth.minute,
+    item.birth.second,
+    item.place.name,
+    item.place.lat,
+    item.place.lng,
+    item.place.tz,
+    fingerprint(item),
+    item.updatedAt,
+    item.id,
+  ];
+}
+
+async function migrateJsonIfNeeded(database: KundaliDb) {
+  if (database.remote) return;
+  const countRow = await database.get("SELECT COUNT(*) AS n FROM kundalis");
+  if (num(countRow?.n) > 0) return;
 
   for (const path of extraJsonMigratePaths()) {
     let raw: string;
@@ -249,7 +274,7 @@ async function migrateJsonIfNeeded(database: DatabaseSync) {
     if (items.length === 0) continue;
     for (const item of items) {
       try {
-        insertRow(database, item);
+        await database.run(INSERT_SQL, insertArgs(item));
       } catch {
         /* skip duplicate ids/fingerprints from a messy JSON file */
       }
@@ -263,38 +288,11 @@ async function migrateJsonIfNeeded(database: DatabaseSync) {
   }
 }
 
-async function openDb(): Promise<DatabaseSync> {
+async function openDb(): Promise<KundaliDb> {
   if (db) return db;
   if (!opening) {
     opening = (async () => {
-      const path = dbPath();
-      await mkdir(dirname(path), { recursive: true });
-      const database = new DatabaseSync(path);
-      database.exec("PRAGMA journal_mode = WAL");
-      database.exec("PRAGMA busy_timeout = 5000");
-      database.exec(`
-        CREATE TABLE IF NOT EXISTS kundalis (
-          id TEXT PRIMARY KEY,
-          family INTEGER NOT NULL DEFAULT 0,
-          name TEXT,
-          gender TEXT,
-          birth_year INTEGER NOT NULL,
-          birth_month INTEGER NOT NULL,
-          birth_day INTEGER NOT NULL,
-          birth_hour INTEGER NOT NULL,
-          birth_minute INTEGER NOT NULL,
-          birth_second INTEGER NOT NULL DEFAULT 0,
-          place_name TEXT NOT NULL,
-          place_lat REAL NOT NULL,
-          place_lng REAL NOT NULL,
-          place_tz REAL NOT NULL,
-          fingerprint TEXT NOT NULL UNIQUE,
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_kundalis_family ON kundalis(family);
-        CREATE INDEX IF NOT EXISTS idx_kundalis_updated ON kundalis(updated_at);
-      `);
+      const database = await initKundaliDb();
       await migrateJsonIfNeeded(database);
       db = database;
       return database;
@@ -306,36 +304,32 @@ async function openDb(): Promise<DatabaseSync> {
   return opening;
 }
 
-function getRowById(database: DatabaseSync, id: string): KundaliRow | undefined {
-  return database.prepare("SELECT * FROM kundalis WHERE id = ?").get(id) as
-    | KundaliRow
-    | undefined;
+async function getRowById(database: KundaliDb, id: string) {
+  const row = await database.get("SELECT * FROM kundalis WHERE id = ?", [id]);
+  return row ? asKundaliRow(row) : undefined;
 }
 
-function getRowByFingerprint(
-  database: DatabaseSync,
-  print: string
-): KundaliRow | undefined {
-  return database
-    .prepare("SELECT * FROM kundalis WHERE fingerprint = ?")
-    .get(print) as KundaliRow | undefined;
+async function getRowByFingerprint(database: KundaliDb, print: string) {
+  const row = await database.get("SELECT * FROM kundalis WHERE fingerprint = ?", [
+    print,
+  ]);
+  return row ? asKundaliRow(row) : undefined;
 }
 
 export async function listKundalis(filter?: { family?: boolean }) {
   const database = await openDb();
-  const rows = (
+  const rows =
     filter?.family === true
-      ? database.prepare(
+      ? await database.all(
           "SELECT * FROM kundalis WHERE family = 1 ORDER BY updated_at DESC"
         )
-      : database.prepare("SELECT * FROM kundalis ORDER BY updated_at DESC")
-  ).all() as KundaliRow[];
-  return rows.map(rowToKundali);
+      : await database.all("SELECT * FROM kundalis ORDER BY updated_at DESC");
+  return rows.map((row) => rowToKundali(asKundaliRow(row)));
 }
 
 export async function getKundali(id: string) {
   const database = await openDb();
-  const row = getRowById(database, id);
+  const row = await getRowById(database, id);
   return row ? rowToKundali(row) : null;
 }
 
@@ -350,9 +344,8 @@ export async function upsertKundali(input: SavedKundaliInput): Promise<SavedKund
     const family = Boolean(input.family);
     const print = fingerprint({ name, birth: input.birth, place: input.place });
 
-    let existing: KundaliRow | undefined;
-    if (input.id) existing = getRowById(database, input.id);
-    if (!existing) existing = getRowByFingerprint(database, print);
+    let existing = input.id ? await getRowById(database, input.id) : undefined;
+    if (!existing) existing = await getRowByFingerprint(database, print);
 
     if (existing) {
       const updated: SavedKundali = {
@@ -364,7 +357,7 @@ export async function upsertKundali(input: SavedKundaliInput): Promise<SavedKund
         place: input.place,
         updatedAt: now,
       };
-      updateRow(database, updated);
+      await database.run(UPDATE_SQL, updateArgs(updated));
       return updated;
     }
 
@@ -378,7 +371,7 @@ export async function upsertKundali(input: SavedKundaliInput): Promise<SavedKund
       createdAt: now,
       updatedAt: now,
     };
-    insertRow(database, created);
+    await database.run(INSERT_SQL, insertArgs(created));
     return created;
   });
 }
@@ -389,7 +382,7 @@ export async function patchKundali(
 ) {
   return withLock(async () => {
     const database = await openDb();
-    const existing = getRowById(database, id);
+    const existing = await getRowById(database, id);
     if (!existing) return null;
     const current = rowToKundali(existing);
     const updated: SavedKundali = {
@@ -409,7 +402,7 @@ export async function patchKundali(
             : null,
       updatedAt: new Date().toISOString(),
     };
-    updateRow(database, updated);
+    await database.run(UPDATE_SQL, updateArgs(updated));
     return updated;
   });
 }
@@ -417,8 +410,8 @@ export async function patchKundali(
 export async function deleteKundali(id: string) {
   return withLock(async () => {
     const database = await openDb();
-    const result = database.prepare("DELETE FROM kundalis WHERE id = ?").run(id);
-    return Number(result.changes) > 0;
+    const result = await database.run("DELETE FROM kundalis WHERE id = ?", [id]);
+    return result.changes > 0;
   });
 }
 

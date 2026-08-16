@@ -42,7 +42,8 @@ RUN mkdir -p /var/data
 
 ENV NODE_ENV=production
 ENV PORT=3000
-# Persistent on Render when the service disk is mounted at /var/data.
+# Local file fallback when KUNDALI_DB_URL is unset. Render free sleep wipes this.
+# Prefer Turso via KUNDALI_DB_URL / KUNDALI_DB_AUTH_TOKEN.
 # Do not use /app/data — that path is copied from the image and is replaced on deploy.
 ENV KUNDALI_DB_PATH=/var/data/saved_kundalis.sqlite
 ENV KUNDALI_STORE_PATH=/var/data/saved_kundalis.json

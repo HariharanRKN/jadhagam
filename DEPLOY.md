@@ -42,8 +42,7 @@ git push -u origin main
    - **Runtime:** Docker
    - **Dockerfile path:** `Dockerfile`
    - **Docker build context:** `.` (repository root)
-   - **Instance type:** a **paid** instance. Saved kundalis use a persistent disk, which Render does not attach on free web services.
-   - **Disk:** 1 GB mounted at `/var/data` (set automatically if you deploy from [`render.yaml`](render.yaml); otherwise add it in the dashboard).
+   - **Instance type:** the free instance is fine for trying the app. It **sleeps when idle** and **wipes local files** on wake. Saved kundalis need Turso (below) or a paid instance with a disk.
 4. **Create Web Service**. Wait for the first build (several minutes). Open the **`.onrender.com` URL** when deploy is live.
 
 Render sets **`PORT`** automatically; the Next.js image listens on that port.
@@ -67,10 +66,22 @@ Render sets **`PORT`** automatically; the Next.js image listens on that port.
 1. Sign up at [render.com](https://render.com) and connect your GitHub account.
 2. **New → Blueprint** (or **Web Service** with Docker).
 3. Select the repo; set root to the directory that contains `Dockerfile` (this `play` folder if that is the repo root).
-4. Render will detect `render.yaml` or use **Docker** with `Dockerfile` at repo root. The blueprint attaches a 1 GB disk at `/var/data` for saved kundalis (`KUNDALI_DB_PATH=/var/data/saved_kundalis.sqlite`).
-5. Deploy. Persistent disks need a paid instance. Free/starter instances may also sleep when idle.
+4. Render will detect `render.yaml` or use **Docker** with `Dockerfile` at repo root.
+5. Deploy. Free instances sleep when idle and start from a blank disk. To keep saved kundalis across sleep, add a Turso database (still SQLite) and set the env vars below.
 
-If this web service already exists **without** a disk: in the Render dashboard add a disk named `kundli-data`, mount path `/var/data`, size 1 GB, set `KUNDALI_DB_PATH=/var/data/saved_kundalis.sqlite`, then redeploy. Do not mount over `/app/data` — that directory holds the planetary history SQLite copied into the image.
+### Saved kundalis on Render free tier (Turso)
+
+A file on the Render box cannot survive sleep. Point the app at a Turso SQLite database:
+
+1. Create a free DB at [turso.tech](https://turso.tech) (CLI or dashboard), e.g. `jadhagam-kundalis`.
+2. Copy the URL (`libsql://…turso.io`) and a token.
+3. In the Render service: **Environment** → add:
+   - `KUNDALI_DB_URL` = the Turso URL
+   - `KUNDALI_DB_AUTH_TOKEN` = the token  
+   Mark the token as secret. Save; Render restarts the service.
+4. Compute a chart, open `/api/kundalis`, then wait for the service to sleep and wake. The same rows should still be there.
+
+Paid Render alternative: attach a disk at `/var/data` and leave `KUNDALI_DB_URL` unset so the app uses `/var/data/saved_kundalis.sqlite`. Do not mount over `/app/data` (planetary history lives there).
 
 Optional env var: `PHOTON_API_URL` — base URL for a [self-hosted Photon](https://github.com/komoot/photon) instance.
 
@@ -137,7 +148,9 @@ You can also use **New → Blueprint** and point at this repo so [`render.yaml`]
 |----------|--------|---------|
 | `PHOTON_API_URL` | Server (optional) | Photon geocoder base URL; default is komoot’s public API. |
 | `PORT` | Container | Set automatically by most platforms (default `3000` in Docker). |
-| `KUNDALI_DB_PATH` | Server | SQLite file for saved/family kundalis. Production default: `/var/data/saved_kundalis.sqlite` (Render disk). Local default: `data/saved_kundalis.sqlite`. |
-| `KUNDALI_STORE_PATH` | Server (optional) | Legacy JSON path. If present and the SQLite file is empty, rows are imported once. |
+| `KUNDALI_DB_URL` | Server | Turso/libSQL URL so saved kundalis survive Render sleep. If unset, uses the local SQLite file. |
+| `KUNDALI_DB_AUTH_TOKEN` | Server | Turso auth token. Required with `KUNDALI_DB_URL`. |
+| `KUNDALI_DB_PATH` | Server | Local SQLite file when Turso is not set. Production default: `/var/data/saved_kundalis.sqlite`. Local default: `data/saved_kundalis.sqlite`. |
+| `KUNDALI_STORE_PATH` | Server (optional) | Legacy JSON path. If present and the local SQLite file is empty, rows are imported once. |
 
 Client-side env vars are not required for the current Photon/timezone flow (those use same-origin `/api/*`).
