@@ -22,6 +22,9 @@ export const birthForm = {
     familyHint:
       "Mark this chart as family. Family kundalis stay on the server and are used for later test runs with real time periods.",
     saveFailed: "Chart computed, but saving on the server failed.",
+    loadSaved: "Load saved kundali",
+    loadSavedPlaceholder: "Choose a saved kundali…",
+    loadingSaved: "Loading…",
     invalidDateTime: "Enter a valid birth date and time.",
     invalidNumbers: "Latitude, longitude, and timezone must be numbers.",
     networkError: "Network error",
@@ -53,6 +56,9 @@ export const birthForm = {
     familyHint:
       "இந்த ஜாதகத்தை குடும்பமாக குறிக்கவும். குடும்ப ஜாதகங்கள் சேவையகத்தில் சேமிக்கப்பட்டு பின்னர் உண்மையான காலங்களுடன் சோதனைக்கு பயன்படும்.",
     saveFailed: "ஜாதகம் கணக்கிடப்பட்டது, ஆனால் சேவையகத்தில் சேமிக்க முடியவில்லை.",
+    loadSaved: "சேமித்த ஜாதகத்தை ஏற்று",
+    loadSavedPlaceholder: "சேமித்த ஜாதகத்தை தேர்வு செய்க…",
+    loadingSaved: "ஏற்றப்படுகிறது…",
     invalidDateTime: "சரியான பிறந்த தேதி மற்றும் நேரத்தை உள்ளிடவும்.",
     invalidNumbers:
       "அட்சரேகை, தீர்க்கரேகை, மற்றும் நேர மண்டலம் எண் மதிப்பாக இருக்க வேண்டும்.",

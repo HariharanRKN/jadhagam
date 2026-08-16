@@ -26,8 +26,26 @@
   grid-template-columns: 1fr 1fr;
 }
 
+.loadRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem 1rem;
+  align-items: end;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--form-border, #e2e8f0);
+}
+
+.loadRow .submit {
+  height: 2.45rem;
+}
+
 @media (max-width: 640px) {
   .row {
+    grid-template-columns: 1fr;
+  }
+
+  .loadRow {
     grid-template-columns: 1fr;
   }
 }

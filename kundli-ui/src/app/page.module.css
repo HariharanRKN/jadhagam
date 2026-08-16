@@ -510,6 +510,26 @@
   color: #b91c1c;
 }
 
+.savedLoadBtn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  border: none;
+  background: #0f766e;
+  color: #fff;
+  cursor: pointer;
+}
+
+.savedLoadBtn:hover:not(:disabled) {
+  background: #0d9488;
+}
+
+.savedLoadBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .familyToolbar {
   display: flex;
   flex-wrap: wrap;
