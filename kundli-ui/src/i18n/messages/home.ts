@@ -61,6 +61,22 @@ export const home = {
     thRoles: "Marriage roles",
     scoreLabel: "Score",
     noMarriageRoles: "No marriage roles active",
+    thKochar: "Kochar",
+    kocharScore: "Kochar score",
+    kocharDelay: "Saturn delay without karaka support",
+    kocharPending: "Snapshot pending",
+    kocharRuleGuru:
+      "Transit Jupiter occupies or aspects houses 2, 5, 7, 11, natal 7th lord, or natal Venus",
+    kocharRuleShukra:
+      "Transit Venus occupies or aspects houses 1, 2, 7, 11, natal 7th lord, or natal Jupiter",
+    kocharRuleSeventh:
+      "Transit 7th lord occupies or aspects houses 1, 7, 11 or natal Venus",
+    kocharRuleNatal:
+      "Karaka transits over natal 7th lord / Venus / Jupiter count as confirmation",
+    kocharRuleCombo:
+      "Guru+Venus, Guru+7th lord, or Guru+Saturn on the 7th is a double-transit confirmation",
+    kocharRuleShani:
+      "Saturn on the 7th without Guru/Venus/7th lord can delay; Rahu on 7th is a mixed/sudden trigger",
     thHouse: "House",
     thSign: "Sign",
     thOccupants: "Planets in house",
@@ -84,7 +100,7 @@ export const home = {
     statusNotYet: "Not in this dasha list",
     dashaPeriodsTitle: "Marriage activation windows",
     dashaPeriodsDesc:
-      "Antara periods where the 3rd, 7th, or 11th lord, Venus, or Jupiter is active. Supportive and strong windows around today are listed.",
+      "Antara periods where the 3rd, 7th, or 11th lord, Venus, or Jupiter is active. Transit karakas (Guru, Shukra, 7th lord) are added to each window when a kochar snapshot is available.",
     strictPermutationTitle: "Exact 3–7–11 lord permutations",
     strictPermutationDesc:
       "Rarer windows where the 3rd, 7th, and 11th lords occupy mahadasha, bhukti, and antara together, in any order. Includes past and future.",
@@ -198,6 +214,22 @@ export const home = {
     thRoles: "திருமண பாத்திரங்கள்",
     scoreLabel: "மதிப்பெண்",
     noMarriageRoles: "திருமண பாத்திரங்கள் செயலில் இல்லை",
+    thKochar: "கோசாரம்",
+    kocharScore: "கோசார மதிப்பெண்",
+    kocharDelay: "கரகர் ஆதரவு இல்லாத சனி தாமதம்",
+    kocharPending: "கோசார படம் காத்திருக்கிறது",
+    kocharRuleGuru:
+      "கோசார குரு 2, 5, 7, 11 பாவங்கள், ஜனன 7ஆம் அதிபதி அல்லது ஜனன சுக்கிரன் மீது இருக்கும்/பார்க்கும்",
+    kocharRuleShukra:
+      "கோசார சுக்கிரன் 1, 2, 7, 11 பாவங்கள், ஜனன 7ஆம் அதிபதி அல்லது ஜனன குரு மீது இருக்கும்/பார்க்கும்",
+    kocharRuleSeventh:
+      "கோசார 7ஆம் அதிபதி 1, 7, 11 பாவங்கள் அல்லது ஜனன சுக்கிரன் மீது இருக்கும்/பார்க்கும்",
+    kocharRuleNatal:
+      "ஜனன 7ஆம் அதிபதி / சுக்கிரன் / குரு மீது கரகர் கோசாரம் உறுதிப்படுத்தல்",
+    kocharRuleCombo:
+      "குரு+சுக்கிரன், குரு+7ஆம் அதிபதி, அல்லது 7ஆம் பாவத்தில் குரு+சனி இரட்டை கோசாரம்",
+    kocharRuleShani:
+      "குரு/சுக்கிரன்/7ஆம் அதிபதி இல்லாமல் 7ஆம் பாவத்தில் சனி தாமதம்; 7ஆம் பாவத்தில் ராகு கலப்பு/திடீர் தூண்டுதல்",
     thHouse: "பாவம்",
     thSign: "ராசி",
     thOccupants: "அந்த பாவத்தில் உள்ள கிரகங்கள்",
@@ -221,7 +253,7 @@ export const home = {
     statusNotYet: "இந்த தசைப் பட்டியலில் இல்லை",
     dashaPeriodsTitle: "திருமணச் செயல்பாட்டு காலங்கள்",
     dashaPeriodsDesc:
-      "3, 7, 11 அதிபதி, சுக்கிரன் அல்லது குரு தசை-புக்தி-அந்தரத்தில் இருக்கும் காலங்கள். இன்றைய அருகில் உள்ள ஆதரவான/வலுவான சாளரங்கள் காட்டப்படும்.",
+      "3, 7, 11 அதிபதி, சுக்கிரன் அல்லது குரு தசை-புக்தி-அந்தரத்தில் இருக்கும் காலங்கள். கோசார கரகர்கள் (குரு, சுக்கிரன், 7ஆம் அதிபதி) கிடைக்கும்போது ஒவ்வொரு சாளரத்திலும் சேர்க்கப்படும்.",
     strictPermutationTitle: "சரியான 3–7–11 அதிபதி permutation",
     strictPermutationDesc:
       "3, 7, 11 பாவ அதிபதிகள் மூன்றும் தசை, புக்தி, அந்தரம் வரிசையில் மாற்றி மாற்றி வரும் அரிதான காலங்கள். கடந்ததும் எதிர்காலமும் சேர்க்கப்படும்.",

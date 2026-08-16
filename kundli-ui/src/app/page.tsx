@@ -12,7 +12,12 @@ import { VimsottariExpander } from "@/components/tables/VimsottariExpander";
 import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
 import { getMessage, interpolate, useTranslations } from "@/i18n/useTranslations";
 import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
-import { buildMarriagePrediction } from "@/lib/prediction/events";
+import {
+  applyKocharToMarriageRow,
+  buildMarriagePrediction,
+  evaluateMarriageKochar,
+} from "@/lib/prediction/events";
+import type { MarriageSequenceRow } from "@/lib/prediction/events";
 import type { AntaraRow, ChartDataPayload } from "@/types/chartData";
 import styles from "./page.module.css";
 
@@ -532,6 +537,38 @@ export default function Home() {
       prediction,
     };
   }, [data, todayIso, language]);
+
+  const overlayedMarriageWindows = useMemo((): MarriageSequenceRow[] => {
+    if (!data || !marriageDerived) return [];
+    const current = marriageDerived.prediction.periodSequence.current;
+    const snapshotsByDate = new Map(
+      marriageSnapshots.map((snapshot) => [snapshot.dateIst, snapshot])
+    );
+    return marriageDerived.prediction.periodSequence.notableWindows.map((row) => {
+      const isCurrent =
+        Boolean(current) &&
+        current!.start === row.start &&
+        current!.maha === row.maha &&
+        current!.bhukti === row.bhukti &&
+        current!.antara === row.antara;
+      if (isCurrent) return current!;
+      const snapshot = snapshotsByDate.get(row.start.slice(0, 10));
+      if (!snapshot) return row;
+      const transitPlanets = Object.values(snapshot.positions).map((planet) => ({
+        planetId: planet.planetId,
+        rasi: planet.rasi,
+      }));
+      return applyKocharToMarriageRow(
+        row,
+        evaluateMarriageKochar(
+          data.birth.ascendantRasi,
+          data.natalPlanets,
+          transitPlanets,
+          language
+        )
+      );
+    });
+  }, [data, language, marriageDerived, marriageSnapshots]);
 
   useEffect(() => {
     setTodayIso(new Date().toISOString().slice(0, 10));
@@ -1232,9 +1269,11 @@ export default function Home() {
               <div className={styles.marriageScoreCard}>
                 <span className={styles.scoreLabel}>{t("home.guruKochar")}</span>
                 <strong>
-                  {marriageDerived.prediction.guruKochar?.favorable
+                  {marriageDerived.prediction.marriageKochar.favorable
                     ? t("home.guruTriggerYes")
-                    : t("home.guruTriggerNo")}
+                    : marriageDerived.prediction.marriageKochar.delayRisk
+                      ? t("home.kocharDelay")
+                      : t("home.guruTriggerNo")}
                 </strong>
                 {marriageDerived.prediction.guruKochar ? (
                   <p className={styles.inlineMeta}>
@@ -1243,10 +1282,30 @@ export default function Home() {
                       language,
                       marriageDerived.prediction.guruKochar.transitHouseFromAsc
                     )}
+                    {" · "}
+                    {t("home.kocharScore")}:{" "}
+                    {marriageDerived.prediction.marriageKochar.score}
                   </p>
                 ) : null}
               </div>
             </div>
+            <ul className={styles.kocharRuleList}>
+              <li>{t("home.kocharRuleGuru")}</li>
+              <li>{t("home.kocharRuleShukra")}</li>
+              <li>{t("home.kocharRuleSeventh")}</li>
+              <li>{t("home.kocharRuleNatal")}</li>
+              <li>{t("home.kocharRuleCombo")}</li>
+              <li>{t("home.kocharRuleShani")}</li>
+            </ul>
+            {marriageDerived.prediction.marriageKochar.hits.length ? (
+              <p className={styles.inlineMeta}>
+                {marriageDerived.prediction.marriageKochar.hits
+                  .filter((hit) => hit.weight > 0)
+                  .slice(0, 6)
+                  .map((hit) => hit.note)
+                  .join(" · ")}
+              </p>
+            ) : null}
             {marriageDerived.prediction.periodSequence.current ? (
               <p className={styles.inlineMeta}>
                 <strong>{t("home.currentPeriodHeading")}:</strong>{" "}
@@ -1401,15 +1460,15 @@ export default function Home() {
                     <th>{t("home.bhukti")}</th>
                     <th>{t("home.antara")}</th>
                     <th>{t("home.scoreLabel")}</th>
+                    <th>{t("home.thKochar")}</th>
                     <th>{t("home.thStatus")}</th>
                     <th>{t("home.thStart")}</th>
                     <th>{t("home.thEnd")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {marriageDerived.prediction.periodSequence.notableWindows
-                    .length ? (
-                    marriageDerived.prediction.periodSequence.notableWindows.map(
+                  {overlayedMarriageWindows.length ? (
+                    overlayedMarriageWindows.map(
                       (row, index) => (
                         <tr key={`${row.start}-${row.maha}-${row.bhukti}-${row.antara}-${index}`}>
                           <td>
@@ -1422,6 +1481,18 @@ export default function Home() {
                           <td>{lordName(language, row.antara)}</td>
                           <td>
                             {row.score} · {marriageVerdictLabel(row.verdict, t)}
+                            {row.dashaScore != null && row.kocharScore
+                              ? ` (${row.dashaScore}+${row.kocharScore})`
+                              : ""}
+                          </td>
+                          <td>
+                            {row.kocharHits?.filter((hit) => hit.weight > 0).length
+                              ? row.kocharHits
+                                  .filter((hit) => hit.weight > 0)
+                                  .slice(0, 3)
+                                  .map((hit) => hit.note)
+                                  .join(" · ")
+                              : t("home.kocharPending")}
                           </td>
                           <td>
                             {(() => {
@@ -1447,7 +1518,7 @@ export default function Home() {
                     )
                   ) : (
                     <tr>
-                      <td colSpan={8}>{t("home.noSuchPeriods")}</td>
+                      <td colSpan={9}>{t("home.noSuchPeriods")}</td>
                     </tr>
                   )}
                 </tbody>
