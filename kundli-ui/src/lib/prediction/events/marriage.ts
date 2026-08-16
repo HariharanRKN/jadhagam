@@ -15,6 +15,7 @@ import {
   type KocharHit,
   type MarriageKocharReading,
 } from "./marriageKochar";
+import { collectMarriageBhavaReadings } from "./marriageBhava";
 
 type MarriageHouseNumber = 3 | 7 | 11;
 
@@ -59,7 +60,13 @@ export type PeriodMatchRole =
   | "7th-lord"
   | "11th-lord"
   | "shukra"
-  | "guru";
+  | "guru"
+  | "3rd-bhava"
+  | "7th-bhava"
+  | "11th-bhava"
+  | "3rd-conjunct"
+  | "7th-conjunct"
+  | "11th-conjunct";
 
 export type MarriageSequenceRow = {
   maha: number;
@@ -355,13 +362,18 @@ function roleWeight(role: PeriodMatchRole): number {
     case "7th-lord":
       return 4;
     case "shukra":
-      return 3;
     case "guru":
+    case "7th-bhava":
       return 3;
     case "11th-lord":
-      return 2;
     case "3rd-lord":
+    case "11th-bhava":
+    case "3rd-bhava":
+    case "7th-conjunct":
       return 2;
+    case "3rd-conjunct":
+    case "11th-conjunct":
+      return 1;
   }
 }
 
@@ -400,10 +412,32 @@ function buildMarriageSequence(
     },
   ];
 
+  const bhavaReadings = collectMarriageBhavaReadings(chart);
+  for (const reading of bhavaReadings) {
+    const occupantRole =
+      reading.houseNumber === 3
+        ? "3rd-bhava"
+        : reading.houseNumber === 7
+          ? "7th-bhava"
+          : "11th-bhava";
+    const conjunctRole =
+      reading.houseNumber === 3
+        ? "3rd-conjunct"
+        : reading.houseNumber === 7
+          ? "7th-conjunct"
+          : "11th-conjunct";
+    for (const occupant of reading.occupants) {
+      marriagePlanetSet.push({ role: occupantRole, planet: planetRef(occupant) });
+    }
+    for (const conjunct of reading.conjuncts) {
+      marriagePlanetSet.push({ role: conjunctRole, planet: planetRef(conjunct) });
+    }
+  }
+
   const roleByPlanetId = new Map<number, PeriodMatchRole[]>();
   for (const entry of marriagePlanetSet) {
     const current = roleByPlanetId.get(entry.planet.planetId) ?? [];
-    current.push(entry.role);
+    if (!current.includes(entry.role)) current.push(entry.role);
     roleByPlanetId.set(entry.planet.planetId, current);
   }
 
@@ -418,6 +452,8 @@ function buildMarriageSequence(
     if (roleList.includes("7th-lord") && roleList.includes("shukra")) score += 14;
     if (roleList.includes("7th-lord") && roleList.includes("guru")) score += 12;
     if (roleList.includes("shukra") && roleList.includes("guru")) score += 10;
+    if (roleList.includes("7th-lord") && roleList.includes("7th-bhava")) score += 12;
+    if (roleList.includes("7th-bhava") && roleList.includes("7th-conjunct")) score += 8;
     if (
       roleList.includes("3rd-lord") &&
       roleList.includes("7th-lord") &&
@@ -437,6 +473,17 @@ function buildMarriageSequence(
       roleList.includes("11th-lord")
     ) {
       notes.push(mp.periodNoteHouseLords(lang));
+    }
+    if (roleList.includes("7th-bhava") || roleList.includes("7th-conjunct")) {
+      notes.push(mp.periodNote7thBhava(lang));
+    }
+    if (
+      roleList.includes("3rd-bhava") ||
+      roleList.includes("11th-bhava") ||
+      roleList.includes("3rd-conjunct") ||
+      roleList.includes("11th-conjunct")
+    ) {
+      notes.push(mp.periodNoteHouseBhava(lang));
     }
     return {
       maha: row.maha,
@@ -463,13 +510,28 @@ function buildMarriageSequence(
     .sort((a, b) => b.score - a.score || a.start.localeCompare(b.start))
     .slice(0, 6);
 
-  const notablePast = sequenceRows
+  const birthYear = Number((chart.meta.dob ?? "1970-01-01").slice(0, 4));
+  const adultFromIso = Number.isFinite(birthYear)
+    ? `${birthYear + 16}-01-01`
+    : "1970-01-01";
+  const notablePastStrong = sequenceRows
     .filter(
       (row) =>
-        row.verdict !== "weak" && row.start.slice(0, 10) <= currentIso
+        row.verdict === "strong" &&
+        row.start.slice(0, 10) <= currentIso &&
+        row.start.slice(0, 10) >= adultFromIso
+    )
+    .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }));
+  const notablePastSupportive = sequenceRows
+    .filter(
+      (row) =>
+        row.verdict === "supportive" && row.start.slice(0, 10) <= currentIso
     )
     .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }))
-    .slice(-8);
+    .slice(-6);
+  const notablePast = [...notablePastStrong, ...notablePastSupportive].sort(
+    (a, b) => a.start.localeCompare(b.start, "en", { numeric: true })
+  );
   const notableFuture = sequenceRows
     .filter(
       (row) => row.verdict !== "weak" && row.start.slice(0, 10) > currentIso

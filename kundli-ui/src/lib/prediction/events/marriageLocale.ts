@@ -118,6 +118,18 @@ export const mp = {
       : "திருமணத்தை ஆதரிக்கும் பாவ அதிபதிகள் இந்த காலத்தில் பங்கேற்கின்றனர்.";
   },
 
+  periodNote7thBhava(lang: MarriageLang): string {
+    return lang === "en"
+      ? "A 7th-bhava occupant or its 8° conjunction is running in this period."
+      : "7ஆம் பாவ நிலை அல்லது அதன் 8° இணைவு இந்த காலத்தில் இயங்குகிறது.";
+  },
+
+  periodNoteHouseBhava(lang: MarriageLang): string {
+    return lang === "en"
+      ? "A 3rd or 11th bhava occupant or conjunction is participating."
+      : "3 அல்லது 11 பாவ நிலை அல்லது இணைவு இந்த காலத்தில் பங்கேற்கிறது.";
+  },
+
   periodSummaryCurrent(
     lang: MarriageLang,
     verdictKey: string,
@@ -372,15 +384,33 @@ export const mp = {
   },
 
   roleLabel(lang: MarriageLang, role: string): string {
-    if (lang === "en") return role;
-    const m: Record<string, string> = {
+    const en: Record<string, string> = {
+      "3rd-lord": "3rd lord",
+      "7th-lord": "7th lord",
+      "11th-lord": "11th lord",
+      shukra: "Shukra",
+      guru: "Guru",
+      "3rd-bhava": "3rd bhava",
+      "7th-bhava": "7th bhava",
+      "11th-bhava": "11th bhava",
+      "3rd-conjunct": "3rd conjunction",
+      "7th-conjunct": "7th conjunction",
+      "11th-conjunct": "11th conjunction",
+    };
+    const ta: Record<string, string> = {
       "3rd-lord": "3ஆம் அதிபதி",
       "7th-lord": "7ஆம் அதிபதி",
       "11th-lord": "11ஆம் அதிபதி",
       shukra: "சுக்கிரன்",
       guru: "குரு",
+      "3rd-bhava": "3ஆம் பாவம்",
+      "7th-bhava": "7ஆம் பாவம்",
+      "11th-bhava": "11ஆம் பாவம்",
+      "3rd-conjunct": "3ஆம் இணைவு",
+      "7th-conjunct": "7ஆம் இணைவு",
+      "11th-conjunct": "11ஆம் இணைவு",
     };
-    return m[role] ?? role;
+    return (lang === "en" ? en : ta)[role] ?? role;
   },
 };
 
