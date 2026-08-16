@@ -36,6 +36,13 @@ export function rasiName(lang: MarriageLang, rasi: number): string {
   return lang === "ta" ? RASI_TA[rasi] : RASI_EN[rasi];
 }
 
+function houseOrdinalEn(house: number): string {
+  if (house === 3) return "3rd";
+  if (house === 7) return "7th";
+  if (house === 11) return "11th";
+  return `${house}th`;
+}
+
 export function dignityLabel(lang: MarriageLang, d: string): string {
   if (lang === "en") return d;
   const m: Record<string, string> = {
@@ -144,8 +151,8 @@ export const mp = {
 
   periodSummaryNone(lang: MarriageLang): string {
     return lang === "en"
-      ? "No active antara row was resolved for the current date."
-      : "தற்போதைய தேதிக்கு செயலில் உள்ள அந்தர வரிசை கண்டறியப்படவில்லை.";
+      ? "No active dasha/bhukti window was resolved for the current date in the age 22–40 marriage range."
+      : "22–40 வயது திருமண வரம்பில் தற்போதைய தேதிக்கு செயலில் உள்ள தசை/புக்தி காலம் கண்டறியப்படவில்லை.";
   },
 
   guruKocharIn(lang: MarriageLang, signName: string, house: number): string {
@@ -381,6 +388,51 @@ export const mp = {
     return lang === "en"
       ? "Shani on the 7th without a supporting karaka can delay rather than complete marriage."
       : "ஆதரவு கரகர் இல்லாமல் 7ஆம் பாவத்தில் சனி திருமணத்தை முடிப்பதற்கு பதிலாக தாமதப்படுத்தலாம்.";
+  },
+
+  kocharFromMoonHouse(
+    lang: MarriageLang,
+    planet: string,
+    mode: "occupy" | "aspect",
+    house: number
+  ): string {
+    const ordinal = houseOrdinalEn(house);
+    if (lang === "en") {
+      return mode === "occupy"
+        ? `${planet} occupies the ${ordinal} from Moon.`
+        : `${planet} aspects the ${ordinal} from Moon.`;
+    }
+    return mode === "occupy"
+      ? `${planet} சந்திரனிலிருந்து ${house}ஆம் பாவத்தில் உள்ளார்.`
+      : `${planet} சந்திரனிலிருந்து ${house}ஆம் பாவத்தைப் பார்க்கிறார்.`;
+  },
+
+  kocharFromMoonLordConjunct(
+    lang: MarriageLang,
+    planet: string,
+    house: number,
+    lordName: string
+  ): string {
+    const ordinal = houseOrdinalEn(house);
+    return lang === "en"
+      ? `${planet} is conjunct natal ${ordinal}-from-Moon lord (${lordName}).`
+      : `${planet} சந்திரனிலிருந்து ${house}ஆம் அதிபதி (${lordName}) உடன் இணைந்துள்ளார்.`;
+  },
+
+  kocharGuruVenusTogetherFromMoon(
+    lang: MarriageLang,
+    house: number
+  ): string {
+    const ordinal = houseOrdinalEn(house);
+    return lang === "en"
+      ? `Guru and Venus are together in the ${ordinal} from Moon.`
+      : `குரு மற்றும் சுக்கிரன் சந்திரனிலிருந்து ${house}ஆம் பாவத்தில் இணைந்துள்ளனர்.`;
+  },
+
+  kocharGuruVenusBothLinked(lang: MarriageLang): string {
+    return lang === "en"
+      ? "Guru and Venus both link to 3/7/11 from Moon."
+      : "குரு மற்றும் சுக்கிரன் இருவரும் சந்திரனிலிருந்து 3/7/11 உடன் இணைகின்றனர்.";
   },
 
   roleLabel(lang: MarriageLang, role: string): string {

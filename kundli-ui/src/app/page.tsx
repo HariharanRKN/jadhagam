@@ -12,12 +12,11 @@ import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
 import { useTranslations } from "@/i18n/useTranslations";
 import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
 import {
-  applyKocharToMarriageRow,
   buildMarriagePrediction,
   collectMarriageBhavaReadings,
-  evaluateMarriageKochar,
+  overlayMoonKocharOnWindows,
 } from "@/lib/prediction/events";
-import type { MarriageSequenceRow } from "@/lib/prediction/events";
+import type { MarriageBhuktiWindow } from "@/lib/prediction/events";
 import type { ChartDataPayload } from "@/types/chartData";
 import styles from "./page.module.css";
 
@@ -132,6 +131,28 @@ function rasiForHouse(ascendantRasi: number, houseNumber: number) {
 
 function formatPlanetList(values: string[], noneLabel: string) {
   return values.length ? values.join(", ") : noneLabel;
+}
+
+async function mapPool<T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await mapper(items[index]);
+    }
+  }
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    () => worker()
+  );
+  await Promise.all(workers);
+  return results;
 }
 
 function marriageVerdictLabel(
@@ -290,37 +311,28 @@ export default function Home() {
     };
   }, [data, todayIso, language]);
 
-  const overlayedMarriageWindows = useMemo((): MarriageSequenceRow[] => {
+  const overlayedMarriageWindows = useMemo((): MarriageBhuktiWindow[] => {
     if (!data || !marriageDerived) return [];
-    const current = marriageDerived.prediction.periodSequence.current;
     const snapshotsByDate = new Map(
-      marriageSnapshots.map((snapshot) => [snapshot.dateIst, snapshot])
+      marriageSnapshots.map((snapshot) => [
+        snapshot.dateIst,
+        Object.values(snapshot.positions).map((planet) => ({
+          planetId: planet.planetId,
+          rasi: planet.rasi,
+        })),
+      ])
     );
-    return marriageDerived.prediction.periodSequence.notableWindows.map((row) => {
-      const isCurrent =
-        Boolean(current) &&
-        current!.start === row.start &&
-        current!.maha === row.maha &&
-        current!.bhukti === row.bhukti &&
-        current!.antara === row.antara;
-      if (isCurrent) return current!;
-      const snapshot = snapshotsByDate.get(row.start.slice(0, 10));
-      if (!snapshot) return row;
-      const transitPlanets = Object.values(snapshot.positions).map((planet) => ({
-        planetId: planet.planetId,
-        rasi: planet.rasi,
-      }));
-      return applyKocharToMarriageRow(
-        row,
-        evaluateMarriageKochar(
-          data.birth.ascendantRasi,
-          data.natalPlanets,
-          transitPlanets,
-          language
-        )
-      );
-    });
+    return overlayMoonKocharOnWindows(
+      marriageDerived.prediction.periodSequence.windows,
+      data.natalPlanets,
+      snapshotsByDate,
+      language
+    );
   }, [data, language, marriageDerived, marriageSnapshots]);
+
+  const currentMarriageBhukti = useMemo(() => {
+    return latestStartedRow(overlayedMarriageWindows, todayIso);
+  }, [overlayedMarriageWindows, todayIso]);
 
   useEffect(() => {
     setTodayIso(new Date().toISOString().slice(0, 10));
@@ -421,30 +433,21 @@ export default function Home() {
   }, [trackerDate]);
 
   useEffect(() => {
-    const prediction = marriageDerived?.prediction;
-    if (!prediction) {
+    const windows = marriageDerived?.prediction.periodSequence.windows;
+    if (!windows?.length) {
       setMarriageSnapshots([]);
+      setMarriageLoading(false);
       return;
     }
-    const snapshotRows = [
-      prediction.periodSequence.current,
-      ...prediction.periodSequence.notableWindows.filter(
-        (row) => row.start !== prediction.periodSequence.current?.start
-      ),
-    ].filter((row): row is NonNullable<typeof row> => row !== null);
     const uniqueDates = Array.from(
-      new Set(snapshotRows.map((row) => row.start.slice(0, 10)))
-    ).slice(0, 6);
-    if (!uniqueDates.length) {
-      setMarriageSnapshots([]);
-      return;
-    }
+      new Set(windows.map((row) => row.start.slice(0, 10)))
+    );
     let cancelled = false;
     async function loadMarriageSnapshots() {
       setMarriageLoading(true);
-      try {
-        const snapshots = await Promise.all(
-          uniqueDates.map(async (dateOnly) => {
+      const snapshots = (
+        await mapPool(uniqueDates, 6, async (dateOnly) => {
+          try {
             const res = await fetch(
               `/api/history/positions?date=${encodeURIComponent(dateOnly)}`
             );
@@ -452,23 +455,16 @@ export default function Home() {
               error?: string;
               detail?: string;
             };
-            if (!res.ok) {
-              throw new Error(
-                json.detail || json.error || `Request failed (${res.status})`
-              );
-            }
+            if (!res.ok) return null;
             return json;
-          })
-        );
-        if (!cancelled) {
-          setMarriageSnapshots(snapshots);
-        }
-      } catch {
-        if (!cancelled) {
-          setMarriageSnapshots([]);
-        }
-      } finally {
-        if (!cancelled) setMarriageLoading(false);
+          } catch {
+            return null;
+          }
+        })
+      ).filter((item): item is HistoricalPositionsResponse => item !== null);
+      if (!cancelled) {
+        setMarriageSnapshots(snapshots);
+        setMarriageLoading(false);
       }
     }
     void loadMarriageSnapshots();
@@ -1015,70 +1011,52 @@ export default function Home() {
                   {t("home.marriageActivation")}
                 </span>
                 <strong>
-                  {marriageDerived.prediction.overview.activationScore}
+                  {marriageLoading
+                    ? "…"
+                    : currentMarriageBhukti
+                      ? currentMarriageBhukti.score
+                      : "—"}
                 </strong>
               </div>
               <div className={styles.marriageScoreCard}>
                 <span className={styles.scoreLabel}>{t("home.guruKochar")}</span>
                 <strong>
-                  {marriageDerived.prediction.marriageKochar.favorable
-                    ? t("home.guruTriggerYes")
-                    : marriageDerived.prediction.marriageKochar.delayRisk
-                      ? t("home.kocharDelay")
+                  {marriageLoading
+                    ? t("home.loadingKochar")
+                    : currentMarriageBhukti?.kocharHits?.some(
+                          (hit) => hit.role === "guru" && hit.weight > 0
+                        )
+                      ? t("home.guruTriggerYes")
                       : t("home.guruTriggerNo")}
                 </strong>
-                {marriageDerived.prediction.guruKochar ? (
+                {currentMarriageBhukti?.kocharApplied ? (
                   <p className={styles.inlineMeta}>
-                    {t("home.transitHouse")}:{" "}
-                    {houseOrdinal(
-                      language,
-                      marriageDerived.prediction.guruKochar.transitHouseFromAsc
-                    )}
-                    {" · "}
-                    {t("home.kocharScore")}:{" "}
-                    {marriageDerived.prediction.marriageKochar.score}
+                    {t("home.kocharScore")}: {currentMarriageBhukti.kocharScore}
                   </p>
                 ) : null}
               </div>
             </div>
-            {marriageDerived.prediction.marriageKochar.hits.length ? (
+            {currentMarriageBhukti?.kocharHits?.filter((hit) => hit.weight > 0)
+              .length ? (
               <p className={styles.inlineMeta}>
-                {marriageDerived.prediction.marriageKochar.hits
+                {currentMarriageBhukti.kocharHits
                   .filter((hit) => hit.weight > 0)
                   .slice(0, 4)
                   .map((hit) => hit.note)
                   .join(" · ")}
               </p>
             ) : null}
-            {marriageDerived.prediction.periodSequence.current ? (
+            {currentMarriageBhukti ? (
               <p className={styles.inlineMeta}>
                 <strong>{t("home.currentPeriodHeading")}:</strong>{" "}
-                {lordName(
-                  language,
-                  marriageDerived.prediction.periodSequence.current.maha
-                )}{" "}
-                /{" "}
-                {lordName(
-                  language,
-                  marriageDerived.prediction.periodSequence.current.bhukti
-                )}{" "}
-                /{" "}
-                {lordName(
-                  language,
-                  marriageDerived.prediction.periodSequence.current.antara
-                )}{" "}
-                · {t("home.scoreLabel")}{" "}
-                {marriageDerived.prediction.periodSequence.current.score} ·{" "}
-                {marriageVerdictLabel(
-                  marriageDerived.prediction.periodSequence.current.verdict,
-                  t
-                )}
-                {marriageDerived.prediction.periodSequence.current.matchedRoles
-                  .length
+                {lordName(language, currentMarriageBhukti.maha)} /{" "}
+                {lordName(language, currentMarriageBhukti.bhukti)} ·{" "}
+                {t("home.scoreLabel")} {currentMarriageBhukti.score} ·{" "}
+                {marriageVerdictLabel(currentMarriageBhukti.verdict, t)}
+                {currentMarriageBhukti.matchedRoles.length
                   ? ` · ${formatMatchedRoles(
                       language,
-                      marriageDerived.prediction.periodSequence.current
-                        .matchedRoles
+                      currentMarriageBhukti.matchedRoles
                     )}`
                   : ""}
               </p>
@@ -1129,6 +1107,9 @@ export default function Home() {
               <p>{t("home.dashaPeriodsDesc")}</p>
             </div>
 
+            {marriageLoading ? (
+              <p className={styles.inlineMeta}>{t("home.loadingKochar")}</p>
+            ) : (
             <div className={styles.tableWrapCustom}>
               <table className={styles.analysisTable}>
                 <thead>
@@ -1136,7 +1117,6 @@ export default function Home() {
                     <th>{t("home.thRoles")}</th>
                     <th>{t("home.mahadasha")}</th>
                     <th>{t("home.bhukti")}</th>
-                    <th>{t("home.antara")}</th>
                     <th>{t("home.scoreLabel")}</th>
                     <th>{t("home.thKochar")}</th>
                     <th>{t("home.thStatus")}</th>
@@ -1148,7 +1128,7 @@ export default function Home() {
                   {overlayedMarriageWindows.length ? (
                     overlayedMarriageWindows.map(
                       (row, index) => (
-                        <tr key={`${row.start}-${row.maha}-${row.bhukti}-${row.antara}-${index}`}>
+                        <tr key={`${row.start}-${row.maha}-${row.bhukti}-${index}`}>
                           <td>
                             {row.matchedRoles.length
                               ? formatMatchedRoles(language, row.matchedRoles)
@@ -1156,38 +1136,33 @@ export default function Home() {
                           </td>
                           <td>{lordName(language, row.maha)}</td>
                           <td>{lordName(language, row.bhukti)}</td>
-                          <td>{lordName(language, row.antara)}</td>
                           <td>
                             {row.score} · {marriageVerdictLabel(row.verdict, t)}
-                            {row.dashaScore != null && row.kocharScore
+                            {row.kocharApplied
                               ? ` (${row.dashaScore}+${row.kocharScore})`
                               : ""}
                           </td>
                           <td>
-                            {row.kocharHits?.filter((hit) => hit.weight > 0).length
-                              ? row.kocharHits
-                                  .filter((hit) => hit.weight > 0)
-                                  .slice(0, 3)
-                                  .map((hit) => hit.note)
-                                  .join(" · ")
-                              : t("home.kocharPending")}
+                            {row.kocharApplied
+                              ? row.kocharHits?.filter((hit) => hit.weight > 0)
+                                  .length
+                                ? row.kocharHits
+                                    .filter((hit) => hit.weight > 0)
+                                    .slice(0, 3)
+                                    .map((hit) => hit.note)
+                                    .join(" · ")
+                                : t("home.kocharNone")
+                              : t("home.kocharUnavailable")}
                           </td>
                           <td>
-                            {(() => {
-                              const current =
-                                marriageDerived.prediction.periodSequence
-                                  .current;
-                              const isCurrent =
-                                Boolean(current) &&
-                                current!.start === row.start &&
-                                current!.maha === row.maha &&
-                                current!.bhukti === row.bhukti &&
-                                current!.antara === row.antara;
-                              if (isCurrent) return t("home.currentPeriodHeading");
-                              return row.start.slice(0, 10) <= todayIso
+                            {currentMarriageBhukti &&
+                            currentMarriageBhukti.start === row.start &&
+                            currentMarriageBhukti.maha === row.maha &&
+                            currentMarriageBhukti.bhukti === row.bhukti
+                              ? t("home.currentPeriodHeading")
+                              : row.start.slice(0, 10) <= todayIso
                                 ? t("home.statusOccurred")
-                                : t("home.statusUpcoming");
-                            })()}
+                                : t("home.statusUpcoming")}
                           </td>
                           <td>{row.start}</td>
                           <td>{row.end ?? "—"}</td>
@@ -1196,12 +1171,13 @@ export default function Home() {
                     )
                   ) : (
                     <tr>
-                      <td colSpan={9}>{t("home.noSuchPeriods")}</td>
+                      <td colSpan={8}>{t("home.noSuchPeriods")}</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+            )}
           </section>
 
           <section className={styles.trackerSection}>
