@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import swisseph as swe
 from jhora.panchanga import drik
-from jhora import const, utils
+from jhora import const
 from jhora.horoscope.chart import charts
 
 PLANET_NAMES = {

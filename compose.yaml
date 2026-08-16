@@ -6,5 +6,7 @@ services:
       - "3001:3000"
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      MALLOC_ARENA_MAX: "2"
       # Optional: override Photon backend (default: https://photon.komoot.io)
       # PHOTON_API_URL: https://your-photon.example.com

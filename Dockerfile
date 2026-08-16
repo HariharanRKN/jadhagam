@@ -29,7 +29,9 @@ COPY requirements.txt horoscope.py ./
 COPY scripts ./scripts
 COPY data ./data
 COPY semantic ./semantic
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+  && apt-get purge -y --auto-remove gcc python3-dev libc6-dev \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/web
 COPY --from=builder /app/kundli-ui/.next/standalone ./
@@ -38,6 +40,9 @@ COPY --from=builder /app/kundli-ui/public ./public
 
 ENV NODE_ENV=production
 ENV PORT=3000
+# Render free web services are 512MB. Leave headroom for one PyJHora child.
+ENV NODE_OPTIONS=--max-old-space-size=192
+ENV MALLOC_ARENA_MAX=2
 # Render (and other hosts) set HOSTNAME to the container name. Next.js standalone
 # binds to process.env.HOSTNAME, so force 0.0.0.0 at process start.
 EXPOSE 3000

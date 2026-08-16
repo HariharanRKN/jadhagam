@@ -1,6 +1,6 @@
-import { spawn } from "node:child_process";
 import { join } from "node:path";
 import type { TransitRasiPlanet } from "@/lib/prediction/events/marriageKochar";
+import { runPython } from "@/lib/runPython";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
@@ -36,32 +36,12 @@ function batchScript() {
     : join(repoRoot(), "scripts/positions_for_dates.py");
 }
 
-function runPython(
-  args: string[],
-  input?: string
-): Promise<{ ok: boolean; stdout: string; stderr: string }> {
-  return new Promise((resolve) => {
-    const child = spawn(pythonBin(), args, {
-      cwd: repoRoot(),
-      stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env },
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString("utf8");
-    });
-    child.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString("utf8");
-    });
-    child.on("close", (code) =>
-      resolve({ ok: code === 0, stdout, stderr })
-    );
-    child.on("error", (err) =>
-      resolve({ ok: false, stdout, stderr: String(err) })
-    );
-    if (input) child.stdin?.write(input);
-    child.stdin?.end();
+function runHistoryPython(args: string[], input?: string) {
+  return runPython({
+    args: [pythonBin(), ...args],
+    cwd: repoRoot(),
+    input,
+    timeoutMs: 60_000,
   });
 }
 
@@ -95,7 +75,7 @@ export async function loadTransitPlanetsByDate(
   const byDate = new Map<string, TransitRasiPlanet[]>();
   if (!unique.length) return byDate;
 
-  const batch = await runPython(
+  const batch = await runHistoryPython(
     [batchScript(), dbPath()],
     JSON.stringify(unique)
   );
@@ -120,7 +100,7 @@ export async function loadTransitPlanetsByDate(
   }
 
   for (const date of missing) {
-    const result = await runPython([
+    const result = await runHistoryPython([
       historyScript(),
       "--db",
       dbPath(),
