@@ -90,6 +90,7 @@ console.log(
           }
         : null,
       adultFrom: "2016-05-10",
+      adultUntil: "2034-05-10",
       snapshotCoverage: "1960-01-01 .. 2026-04-03",
       missingDates: payload.missing,
       windowCount: scored.length,

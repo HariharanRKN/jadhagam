@@ -9,7 +9,6 @@ import {
   type MarriageLang,
 } from "./marriageLocale";
 import {
-  applyKocharToMarriageRow,
   evaluateMarriageKochar,
   type GuruKocharReading,
   type KocharHit,
@@ -591,31 +590,7 @@ export function buildMarriagePrediction(
     lang
   );
   const guruKochar = marriageKochar.guru;
-  let periodSequence = buildMarriageSequence(chart, lordMap, lang, asOfIso);
-  if (periodSequence.current) {
-    const current = applyKocharToMarriageRow(
-      periodSequence.current,
-      marriageKochar
-    );
-    periodSequence = {
-      ...periodSequence,
-      current,
-      notableWindows: periodSequence.notableWindows.map((row) =>
-        row.start === current.start &&
-        row.maha === current.maha &&
-        row.bhukti === current.bhukti &&
-        row.antara === current.antara
-          ? current
-          : row
-      ),
-      summary: mp.periodSummaryCurrent(
-        lang,
-        current.verdict,
-        current.score,
-        formatMatchedRoles(lang, current.matchedRoles)
-      ),
-    };
-  }
+  const periodSequence = buildMarriageSequence(chart, lordMap, lang, asOfIso);
 
   const houseAverage =
     marriageHouses.reduce((sum, house) => sum + house.aggregateScore, 0) / marriageHouses.length;
@@ -651,13 +626,6 @@ export function buildMarriagePrediction(
   if (seventhLord?.shaniInfluence.present) challenges.push(mp.chShani7th(lang));
   if (shukraKarakathuva?.rahuInfluence.present) challenges.push(mp.chRahuShukra(lang));
   if (shukraKarakathuva?.shaniInfluence.present) challenges.push(mp.chShaniShukra(lang));
-  if (marriageKochar.favorable) {
-    positives.push(mp.posKochar(lang));
-  } else if (marriageKochar.delayRisk) {
-    challenges.push(mp.chKocharDelay(lang));
-  } else {
-    challenges.push(mp.chKochar(lang));
-  }
 
   const foundationSummaryParts = [mp.foundationOpen(lang)];
   if (seventhLord) {
@@ -684,7 +652,6 @@ export function buildMarriagePrediction(
     mp.overviewStrength(lang, foundationScore),
     mp.overviewActivation(lang, activationScore),
     periodSequence.summary,
-    marriageKochar.favorable ? mp.overviewKocharYes(lang) : mp.overviewKocharNo(lang),
   ].join(" ");
 
   return {

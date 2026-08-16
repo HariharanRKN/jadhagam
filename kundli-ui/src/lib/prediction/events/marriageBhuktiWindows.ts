@@ -41,6 +41,7 @@ const MARRIAGE_HOUSE_ROLES: PeriodMatchRole[] = [
 ];
 
 export const MARRIAGE_ADULT_AGE_YEARS = 22;
+export const MARRIAGE_MAX_AGE_YEARS = 40;
 
 export type MarriageBhuktiWindow = {
   maha: number;
@@ -143,10 +144,15 @@ export function marriageAdultFromIso(dob: string, adultAge = MARRIAGE_ADULT_AGE_
   return addYearsIso(dob || "1970-01-01", adultAge);
 }
 
+export function marriageMaxAgeIso(dob: string, maxAge = MARRIAGE_MAX_AGE_YEARS): string {
+  return addYearsIso(dob || "1970-01-01", maxAge);
+}
+
 export function listMarriageBhuktiWindows(
   chart: ChartDataPayload,
   lang: MarriageLang = "en",
-  adultAge = MARRIAGE_ADULT_AGE_YEARS
+  adultAge = MARRIAGE_ADULT_AGE_YEARS,
+  maxAge = MARRIAGE_MAX_AGE_YEARS
 ): MarriageBhuktiWindow[] {
   const lordMap = {
     3: SIGN_LORD[rasiForHouse(chart.birth.ascendantRasi, 3)],
@@ -188,9 +194,13 @@ export function listMarriageBhuktiWindows(
   }
 
   const adultFrom = marriageAdultFromIso(chart.meta.dob, adultAge);
+  const adultUntil = marriageMaxAgeIso(chart.meta.dob, maxAge);
 
   return (chart.vimsottari.bhukti as BhuktiRow[])
-    .filter((row) => row.start.slice(0, 10) >= adultFrom)
+    .filter((row) => {
+      const start = row.start.slice(0, 10);
+      return start >= adultFrom && start <= adultUntil;
+    })
     .map((row): MarriageBhuktiWindow | null => {
       const matchedRoles = new Set<PeriodMatchRole>();
       for (const lord of [row.maha, row.lord]) {
