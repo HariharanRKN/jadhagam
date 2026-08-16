@@ -1,8 +1,24 @@
 import { join } from "node:path";
+import { isoDateKey } from "@/lib/isoDate";
 import type { TransitRasiPlanet } from "@/lib/prediction/events/marriageKochar";
 import { runPython } from "@/lib/runPython";
 
 const IS_PROD = process.env.NODE_ENV === "production";
+
+export type HistoryPlanetPosition = {
+  planetId: number;
+  planetEn: string;
+  rasi: number;
+  degInSign?: number;
+  totalLongitude?: number;
+};
+
+export type HistorySnapshot = {
+  dateIst: string;
+  timestampIst: string;
+  timestampUtc?: string;
+  positions: Record<string, HistoryPlanetPosition>;
+};
 
 function repoRoot() {
   return IS_PROD ? "/app" : join(process.cwd(), "..");
@@ -46,7 +62,7 @@ function runHistoryPython(args: string[], input?: string) {
 }
 
 function planetsFromPositions(
-  positions: Record<string, { planetId: number; rasi: number }>
+  positions: Record<string, { planetId: number; rasi: number; planetEn?: string }>
 ): TransitRasiPlanet[] {
   return Object.values(positions).map((planet) => ({
     planetId: planet.planetId,
@@ -68,11 +84,40 @@ function parseLastJsonObject(stdout: string): unknown {
   throw new Error("No JSON object found in history command output");
 }
 
-export async function loadTransitPlanetsByDate(
+function snapshotFromPositions(
+  requestedDate: string,
+  dateIst: string | undefined,
+  positions: Record<string, HistoryPlanetPosition>,
+  timestampIst?: string,
+  timestampUtc?: string
+): HistorySnapshot {
+  const key = isoDateKey(requestedDate) || isoDateKey(dateIst);
+  return {
+    dateIst: key,
+    timestampIst: timestampIst || `${key}T12:00:00+05:30`,
+    timestampUtc,
+    positions,
+  };
+}
+
+function rememberSnapshot(
+  map: Map<string, HistorySnapshot>,
+  requestedDate: string,
+  snapshot: HistorySnapshot
+) {
+  const keys = [isoDateKey(requestedDate), isoDateKey(snapshot.dateIst)].filter(
+    Boolean
+  );
+  for (const key of keys) map.set(key, { ...snapshot, dateIst: key });
+}
+
+export async function loadPositionSnapshots(
   dates: string[]
-): Promise<Map<string, TransitRasiPlanet[]>> {
-  const unique = Array.from(new Set(dates.filter(Boolean)));
-  const byDate = new Map<string, TransitRasiPlanet[]>();
+): Promise<Map<string, HistorySnapshot>> {
+  const unique = Array.from(
+    new Set(dates.map((date) => isoDateKey(date)).filter(Boolean))
+  );
+  const byDate = new Map<string, HistorySnapshot>();
   if (!unique.length) return byDate;
 
   const batch = await runHistoryPython(
@@ -86,16 +131,35 @@ export async function loadTransitPlanetsByDate(
         missing?: string[];
         snapshots?: Array<{
           dateIst: string;
-          positions: Record<string, { planetId: number; rasi: number }> | null;
+          timestampIst?: string;
+          timestampUtc?: string;
+          positions: Record<string, HistoryPlanetPosition> | null;
         }>;
       };
+      const found = new Set<string>();
       for (const snapshot of payload.snapshots ?? []) {
         if (!snapshot.positions) continue;
-        byDate.set(snapshot.dateIst, planetsFromPositions(snapshot.positions));
+        const requested =
+          unique.find((date) => isoDateKey(date) === isoDateKey(snapshot.dateIst)) ??
+          snapshot.dateIst;
+        rememberSnapshot(
+          byDate,
+          requested,
+          snapshotFromPositions(
+            requested,
+            snapshot.dateIst,
+            snapshot.positions,
+            snapshot.timestampIst,
+            snapshot.timestampUtc
+          )
+        );
+        found.add(isoDateKey(snapshot.dateIst));
       }
-      missing = payload.missing ?? unique.filter((date) => !byDate.has(date));
+      missing =
+        payload.missing?.map(isoDateKey).filter((date) => !byDate.has(date)) ??
+        unique.filter((date) => !found.has(date) && !byDate.has(date));
     } catch {
-      missing = unique;
+      missing = unique.filter((date) => !byDate.has(date));
     }
   }
 
@@ -112,14 +176,54 @@ export async function loadTransitPlanetsByDate(
     try {
       const json = parseLastJsonObject(result.stdout) as {
         dateIst?: string;
-        positions?: Record<string, { planetId: number; rasi: number }>;
+        timestampIst?: string;
+        timestampUtc?: string;
+        positions?: Record<string, HistoryPlanetPosition>;
       };
       if (!json.positions) continue;
-      byDate.set(json.dateIst ?? date, planetsFromPositions(json.positions));
+      rememberSnapshot(
+        byDate,
+        date,
+        snapshotFromPositions(
+          date,
+          json.dateIst,
+          json.positions,
+          json.timestampIst,
+          json.timestampUtc
+        )
+      );
     } catch {
       continue;
     }
   }
 
   return byDate;
+}
+
+export async function loadTransitPlanetsByDate(
+  dates: string[]
+): Promise<Map<string, TransitRasiPlanet[]>> {
+  const snapshots = await loadPositionSnapshots(dates);
+  const byDate = new Map<string, TransitRasiPlanet[]>();
+  for (const [date, snapshot] of snapshots) {
+    byDate.set(date, planetsFromPositions(snapshot.positions));
+  }
+  return byDate;
+}
+
+export function historySnapshotsList(
+  snapshots: Map<string, HistorySnapshot>,
+  dates: string[]
+): HistorySnapshot[] {
+  const seen = new Set<string>();
+  const list: HistorySnapshot[] = [];
+  for (const date of dates) {
+    const key = isoDateKey(date);
+    if (!key || seen.has(key)) continue;
+    const snapshot = snapshots.get(key);
+    if (!snapshot) continue;
+    seen.add(key);
+    list.push(snapshot);
+  }
+  return list;
 }

@@ -12,6 +12,7 @@ import {
 } from "./marriageMoonKochar";
 import type { TransitRasiPlanet } from "./marriageKochar";
 import type { KocharHit } from "./marriageKochar";
+import { isoDateKey } from "@/lib/isoDate";
 
 const SIGN_LORD: Record<number, number> = {
   0: 2,
@@ -63,7 +64,7 @@ function clampScore(value: number): number {
 }
 
 function addYearsIso(isoDate: string, years: number): string {
-  const [year, month, day] = isoDate.slice(0, 10).split("-").map(Number);
+  const [year, month, day] = isoDateKey(isoDate).split("-").map(Number);
   return `${year + years}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
@@ -198,7 +199,7 @@ export function listMarriageBhuktiWindows(
 
   return (chart.vimsottari.bhukti as BhuktiRow[])
     .filter((row) => {
-      const start = row.start.slice(0, 10);
+      const start = isoDateKey(row.start);
       return start >= adultFrom && start <= adultUntil;
     })
     .map((row): MarriageBhuktiWindow | null => {
@@ -236,14 +237,26 @@ export function applyMoonKocharToBhuktiWindow(
   return { ...mixed, kocharApplied: true };
 }
 
+function snapshotsByIsoDate(
+  snapshotsByDate: Map<string, TransitRasiPlanet[]>
+): Map<string, TransitRasiPlanet[]> {
+  const normalized = new Map<string, TransitRasiPlanet[]>();
+  for (const [key, planets] of snapshotsByDate) {
+    const dateKey = isoDateKey(key);
+    if (dateKey && planets?.length) normalized.set(dateKey, planets);
+  }
+  return normalized;
+}
+
 export function overlayMoonKocharOnWindows(
   windows: MarriageBhuktiWindow[],
   natalPlanets: ChartDataPayload["natalPlanets"],
   snapshotsByDate: Map<string, TransitRasiPlanet[]>,
   lang: MarriageLang = "en"
 ): MarriageBhuktiWindow[] {
+  const byDate = snapshotsByIsoDate(snapshotsByDate);
   return windows.map((row) => {
-    const transitPlanets = snapshotsByDate.get(row.start.slice(0, 10));
+    const transitPlanets = byDate.get(isoDateKey(row.start));
     if (!transitPlanets?.length) return row;
     return applyMoonKocharToBhuktiWindow(row, natalPlanets, transitPlanets, lang);
   });
@@ -253,10 +266,10 @@ export function currentBhuktiWindow(
   windows: MarriageBhuktiWindow[],
   asOfIso: string
 ): MarriageBhuktiWindow | null {
-  const asOf = asOfIso.slice(0, 10);
+  const asOf = isoDateKey(asOfIso);
   return (
     [...windows]
-      .filter((row) => row.start.slice(0, 10) <= asOf)
+      .filter((row) => isoDateKey(row.start) <= asOf)
       .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }))
       .at(-1) ?? null
   );

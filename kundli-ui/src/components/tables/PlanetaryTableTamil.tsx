@@ -38,7 +38,7 @@ function PlanetTable({
         <tbody>
           {rows.map((r) => (
             <tr key={r.planetId}>
-              <td>
+              <td data-label={labels.planet}>
                 {language === "en" ? (
                   <>
                     <strong>{r.planetEn}</strong>
@@ -51,17 +51,19 @@ function PlanetTable({
                   </>
                 )}
               </td>
-              <td>
+              <td data-label={labels.rasi}>
                 {language === "en" ? getRasiCellLabel("en", r.rasi) : r.rasiTa}
               </td>
-              <td className={styles.mono}>{r.degInSign.toFixed(2)}°</td>
-              <td className={styles.mono}>
+              <td className={styles.mono} data-label={labels.deg}>
+                {r.degInSign.toFixed(2)}°
+              </td>
+              <td className={styles.mono} data-label={labels.totalDegTa}>
                 {typeof r.totalLongitude === "number"
                   ? `${r.totalLongitude.toFixed(2)}°`
                   : "—"}
               </td>
-              <td>{r.nakshatraTa}</td>
-              <td>{r.pada}</td>
+              <td data-label={labels.nakshatra}>{r.nakshatraTa}</td>
+              <td data-label={labels.pada}>{r.pada}</td>
             </tr>
           ))}
         </tbody>

@@ -19,6 +19,7 @@ import {
   type MoonKocharReading,
 } from "./marriageMoonKochar";
 import type { TransitRasiPlanet, KocharHit } from "./marriageKochar";
+import { isoDateKey } from "@/lib/isoDate";
 
 type MarriageHouseNumber = 3 | 7 | 11;
 
@@ -375,11 +376,9 @@ export function buildMarriagePrediction(
   const shukraKarakathuva = buildPlacementReading(chart, shukraRow, shukraLabel, lang);
   const guruKarakathuva = buildPlacementReading(chart, guruRow, guruLabel, lang);
 
-  const currentIso = (
-    asOfIso ??
-    chart.transit.computedAt ??
-    new Date().toISOString()
-  ).slice(0, 10);
+  const currentIso = isoDateKey(
+    asOfIso ?? chart.transit.computedAt ?? new Date().toISOString()
+  );
   const windows = overlayMoonKocharOnWindows(
     listMarriageBhuktiWindows(chart, lang),
     chart.natalPlanets,
@@ -387,7 +386,7 @@ export function buildMarriagePrediction(
     lang
   );
   const current = currentBhuktiWindow(windows, currentIso);
-  const upcoming = windows.filter((row) => row.start.slice(0, 10) > currentIso);
+  const upcoming = windows.filter((row) => isoDateKey(row.start) > currentIso);
   const periodSequence: MarriagePeriodSequence = {
     current,
     upcoming,
@@ -402,7 +401,7 @@ export function buildMarriagePrediction(
       : mp.periodSummaryNone(lang),
   };
   const currentTransits = current
-    ? transitsByDate?.get(current.start.slice(0, 10))
+    ? transitsByDate?.get(isoDateKey(current.start))
     : undefined;
   const moonKochar = currentTransits?.length
     ? evaluateMoonMarriageKochar(chart.natalPlanets, currentTransits, lang)

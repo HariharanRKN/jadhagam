@@ -1,8 +1,11 @@
-import { buildMarriagePrediction } from "@/lib/prediction/events";
-import { loadTransitPlanetsByDate } from "@/lib/history/loadPositions";
+import { buildMarriagePrediction, listMarriageBhuktiWindows } from "@/lib/prediction/events";
+import {
+  historySnapshotsList,
+  loadPositionSnapshots,
+} from "@/lib/history/loadPositions";
+import { isoDateKey } from "@/lib/isoDate";
 import type { MarriageLang } from "@/lib/prediction/events/marriageLocale";
 import type { ChartDataPayload } from "@/types/chartData";
-import { listMarriageBhuktiWindows } from "@/lib/prediction/events";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -43,7 +46,20 @@ export async function POST(request: Request) {
   }
 
   const windows = listMarriageBhuktiWindows(chart, language);
-  const dates = Array.from(new Set(windows.map((row) => row.start.slice(0, 10))));
-  const transitsByDate = await loadTransitPlanetsByDate(dates);
-  return Response.json(buildMarriagePrediction(chart, language, undefined, transitsByDate));
+  const dates = Array.from(new Set(windows.map((row) => isoDateKey(row.start)).filter(Boolean)));
+  const snapshotsByDate = await loadPositionSnapshots(dates);
+  const transitsByDate = new Map(
+    [...snapshotsByDate.entries()].map(([date, snapshot]) => [
+      date,
+      Object.values(snapshot.positions).map((planet) => ({
+        planetId: planet.planetId,
+        rasi: planet.rasi,
+      })),
+    ])
+  );
+  const prediction = buildMarriagePrediction(chart, language, undefined, transitsByDate);
+  return Response.json({
+    ...prediction,
+    startDateSnapshots: historySnapshotsList(snapshotsByDate, dates),
+  });
 }

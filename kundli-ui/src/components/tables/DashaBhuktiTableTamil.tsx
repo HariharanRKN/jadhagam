@@ -37,10 +37,14 @@ export function DashaBhuktiTableTamil({ rows, labels, dark }: Props) {
           <tbody>
             {sorted.map((r, i) => (
               <tr key={`${r.maha}-${r.lord}-${r.start}-${i}`}>
-                <td>{lord(r.maha)}</td>
-                <td>{lord(r.lord)}</td>
-                <td className={styles.mono}>{r.start}</td>
-                <td className={styles.mono}>{r.end ?? "—"}</td>
+                <td data-label={tableLabels.mahadasha}>{lord(r.maha)}</td>
+                <td data-label={tableLabels.bhukti}>{lord(r.lord)}</td>
+                <td className={styles.mono} data-label={tableLabels.start}>
+                  {r.start}
+                </td>
+                <td className={styles.mono} data-label={tableLabels.end}>
+                  {r.end ?? "—"}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -14,9 +14,11 @@ import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
 import {
   buildMarriagePrediction,
   collectMarriageBhavaReadings,
+  listMarriageBhuktiWindows,
   overlayMoonKocharOnWindows,
 } from "@/lib/prediction/events";
-import type { MarriageBhuktiWindow } from "@/lib/prediction/events";
+import type { MarriageBhuktiWindow, MarriagePrediction } from "@/lib/prediction/events";
+import { isoDateKey } from "@/lib/isoDate";
 import type { ChartDataPayload } from "@/types/chartData";
 import styles from "./page.module.css";
 
@@ -24,8 +26,8 @@ type TrackerTab = "kundli" | "kochar" | "marriage" | "family" | "birthTime";
 
 type HistoricalPositionsResponse = {
   dateIst: string;
-  timestampIst: string;
-  timestampUtc: string;
+  timestampIst?: string;
+  timestampUtc?: string;
   positions: Record<
     string,
     {
@@ -165,7 +167,7 @@ function marriageVerdictLabel(
 }
 
 function parseDatePart(value: string) {
-  return value.slice(0, 10);
+  return isoDateKey(value);
 }
 
 function latestStartedRow<T extends { start: string }>(rows: T[], selectedDate: string) {
@@ -259,6 +261,8 @@ export default function Home() {
   const [marriageSnapshots, setMarriageSnapshots] = useState<
     HistoricalPositionsResponse[]
   >([]);
+  const [marriageServerPrediction, setMarriageServerPrediction] =
+    useState<MarriagePrediction | null>(null);
   const [todayIso, setTodayIso] = useState("2026-04-03");
   const [familyInsightDate, setFamilyInsightDate] = useState("2026-04-05");
   const [familyTransitSnapshot, setFamilyTransitSnapshot] =
@@ -312,10 +316,13 @@ export default function Home() {
   }, [data, todayIso, language]);
 
   const overlayedMarriageWindows = useMemo((): MarriageBhuktiWindow[] => {
+    if (marriageServerPrediction) {
+      return marriageServerPrediction.periodSequence.windows;
+    }
     if (!data || !marriageDerived) return [];
     const snapshotsByDate = new Map(
       marriageSnapshots.map((snapshot) => [
-        snapshot.dateIst,
+        isoDateKey(snapshot.dateIst),
         Object.values(snapshot.positions).map((planet) => ({
           planetId: planet.planetId,
           rasi: planet.rasi,
@@ -328,7 +335,7 @@ export default function Home() {
       snapshotsByDate,
       language
     );
-  }, [data, language, marriageDerived, marriageSnapshots]);
+  }, [data, language, marriageDerived, marriageServerPrediction, marriageSnapshots]);
 
   const currentMarriageBhukti = useMemo(() => {
     return latestStartedRow(overlayedMarriageWindows, todayIso);
@@ -433,45 +440,68 @@ export default function Home() {
   }, [trackerDate]);
 
   useEffect(() => {
-    const windows = marriageDerived?.prediction.periodSequence.windows;
-    if (!windows?.length) {
+    if (!data) {
       setMarriageSnapshots([]);
+      setMarriageServerPrediction(null);
       setMarriageLoading(false);
       return;
     }
-    const uniqueDates = Array.from(
-      new Set(windows.map((row) => row.start.slice(0, 10)))
-    );
     let cancelled = false;
-    async function loadMarriageSnapshots() {
+    const chart = data;
+    async function loadMarriageSky() {
       setMarriageLoading(true);
-      const snapshots = (
-        await mapPool(uniqueDates, 6, async (dateOnly) => {
-          try {
-            const res = await fetch(
-              `/api/history/positions?date=${encodeURIComponent(dateOnly)}`
-            );
-            const json = (await res.json()) as HistoricalPositionsResponse & {
-              error?: string;
-              detail?: string;
-            };
-            if (!res.ok) return null;
-            return json;
-          } catch {
-            return null;
-          }
-        })
-      ).filter((item): item is HistoricalPositionsResponse => item !== null);
-      if (!cancelled) {
-        setMarriageSnapshots(snapshots);
-        setMarriageLoading(false);
+      try {
+        const res = await fetch("/api/prediction/marriage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chart, language }),
+        });
+        const json = (await res.json()) as MarriagePrediction & {
+          error?: string;
+          startDateSnapshots?: HistoricalPositionsResponse[];
+        };
+        if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
+        if (cancelled) return;
+        setMarriageServerPrediction(json);
+        setMarriageSnapshots(
+          (json.startDateSnapshots ?? []).filter(
+            (snapshot) => snapshot?.dateIst && snapshot.positions
+          )
+        );
+      } catch {
+        if (cancelled) return;
+        setMarriageServerPrediction(null);
+        const windows = listMarriageBhuktiWindows(chart, language);
+        const uniqueDates = Array.from(
+          new Set(windows.map((row) => isoDateKey(row.start)).filter(Boolean))
+        );
+        const snapshots = (
+          await mapPool(uniqueDates, 6, async (dateOnly) => {
+            try {
+              const res = await fetch(
+                `/api/history/positions?date=${encodeURIComponent(dateOnly)}`
+              );
+              const json = (await res.json()) as HistoricalPositionsResponse & {
+                error?: string;
+                detail?: string;
+              };
+              if (!res.ok) return null;
+              return { ...json, dateIst: isoDateKey(json.dateIst) || dateOnly };
+            } catch {
+              return null;
+            }
+          })
+        ).filter((item): item is HistoricalPositionsResponse => item !== null);
+        if (!cancelled) setMarriageSnapshots(snapshots);
+      } finally {
+        if (!cancelled) setMarriageLoading(false);
       }
     }
-    void loadMarriageSnapshots();
+    void loadMarriageSky();
     return () => {
       cancelled = true;
     };
-  }, [marriageDerived]);
+  }, [data, language]);
 
   async function handleSearch() {
     if (!selectedPlanets.length || !selectedRasi) return;
@@ -995,7 +1025,7 @@ export default function Home() {
               <p>{t("home.marriageAssessmentDesc")}</p>
             </div>
             <p className={styles.inlineMeta}>
-              {marriageDerived.prediction.overview.summary}
+              {(marriageServerPrediction ?? marriageDerived.prediction).overview.summary}
             </p>
             <div className={styles.marriageScoreRow}>
               <div className={styles.marriageScoreCard}>
@@ -1072,7 +1102,7 @@ export default function Home() {
             </div>
 
             <div className={styles.tableWrapCustom}>
-              <table className={styles.analysisTable}>
+              <table className={`${styles.analysisTable} ${styles.responsiveTable}`}>
                 <thead>
                   <tr>
                     <th>{t("home.thHouse")}</th>
@@ -1085,15 +1115,17 @@ export default function Home() {
                 <tbody>
                   {marriageDerived.analysisRows.map((row) => (
                     <tr key={row.houseNumber}>
-                      <td>{houseOrdinal(language, row.houseNumber)}</td>
-                      <td>{rasiName(language, row.rasi)}</td>
-                      <td>
+                      <td data-label={t("home.thHouse")}>
+                        {houseOrdinal(language, row.houseNumber)}
+                      </td>
+                      <td data-label={t("home.thSign")}>{rasiName(language, row.rasi)}</td>
+                      <td data-label={t("home.thBhavaOccupants")}>
                         {formatPlanetList(row.occupants, t("home.noneList"))}
                       </td>
-                      <td>
+                      <td data-label={t("home.thConjuncts")}>
                         {formatPlanetList(row.conjuncts, t("home.noneList"))}
                       </td>
-                      <td>{row.lordName}</td>
+                      <td data-label={t("home.thLord")}>{row.lordName}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1111,7 +1143,7 @@ export default function Home() {
               <p className={styles.inlineMeta}>{t("home.loadingKochar")}</p>
             ) : (
             <div className={styles.tableWrapCustom}>
-              <table className={styles.analysisTable}>
+              <table className={`${styles.analysisTable} ${styles.responsiveTable}`}>
                 <thead>
                   <tr>
                     <th>{t("home.thRoles")}</th>
@@ -1129,20 +1161,20 @@ export default function Home() {
                     overlayedMarriageWindows.map(
                       (row, index) => (
                         <tr key={`${row.start}-${row.maha}-${row.bhukti}-${index}`}>
-                          <td>
+                          <td data-label={t("home.thRoles")}>
                             {row.matchedRoles.length
                               ? formatMatchedRoles(language, row.matchedRoles)
                               : t("home.noMarriageRoles")}
                           </td>
-                          <td>{lordName(language, row.maha)}</td>
-                          <td>{lordName(language, row.bhukti)}</td>
-                          <td>
+                          <td data-label={t("home.mahadasha")}>{lordName(language, row.maha)}</td>
+                          <td data-label={t("home.bhukti")}>{lordName(language, row.bhukti)}</td>
+                          <td data-label={t("home.scoreLabel")}>
                             {row.score} · {marriageVerdictLabel(row.verdict, t)}
                             {row.kocharApplied
                               ? ` (${row.dashaScore}+${row.kocharScore})`
                               : ""}
                           </td>
-                          <td>
+                          <td data-label={t("home.thKochar")}>
                             {row.kocharApplied
                               ? row.kocharHits?.filter((hit) => hit.weight > 0)
                                   .length
@@ -1154,18 +1186,18 @@ export default function Home() {
                                 : t("home.kocharNone")
                               : t("home.kocharUnavailable")}
                           </td>
-                          <td>
+                          <td data-label={t("home.thStatus")}>
                             {currentMarriageBhukti &&
                             currentMarriageBhukti.start === row.start &&
                             currentMarriageBhukti.maha === row.maha &&
                             currentMarriageBhukti.bhukti === row.bhukti
                               ? t("home.currentPeriodHeading")
-                              : row.start.slice(0, 10) <= todayIso
+                              : isoDateKey(row.start) <= todayIso
                                 ? t("home.statusOccurred")
                                 : t("home.statusUpcoming")}
                           </td>
-                          <td>{row.start}</td>
-                          <td>{row.end ?? "—"}</td>
+                          <td data-label={t("home.thStart")}>{row.start}</td>
+                          <td data-label={t("home.thEnd")}>{row.end ?? "—"}</td>
                         </tr>
                       )
                     )
