@@ -41,11 +41,12 @@ jobs:
           npm ci
           npm run build
 
+      # next start is incompatible with output: standalone. Dev mode uses
+      # repo-relative Python paths (../horoscope.py) instead of /app/...
       - name: Start Next.js
         working-directory: kundli-ui
         run: |
-          npm start &
-          echo $! > /tmp/next-smoke.pid
+          npm run dev &
           for i in $(seq 1 60); do
             if curl -sf http://127.0.0.1:3000 >/dev/null; then
               echo "Next.js is up"
