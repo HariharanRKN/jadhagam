@@ -8,6 +8,10 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/health
+    disk:
+      name: kundli-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -15,3 +19,5 @@ services:
         value: --max-old-space-size=192
       - key: MALLOC_ARENA_MAX
         value: "2"
+      - key: KUNDALI_DB_PATH
+        value: /var/data/saved_kundalis.sqlite

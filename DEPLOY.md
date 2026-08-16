@@ -42,7 +42,8 @@ git push -u origin main
    - **Runtime:** Docker
    - **Dockerfile path:** `Dockerfile`
    - **Docker build context:** `.` (repository root)
-   - **Instance type:** choose the smallest paid Docker instance if free Docker is unavailable; free tiers change over time.
+   - **Instance type:** a **paid** instance. Saved kundalis use a persistent disk, which Render does not attach on free web services.
+   - **Disk:** 1 GB mounted at `/var/data` (set automatically if you deploy from [`render.yaml`](render.yaml); otherwise add it in the dashboard).
 4. **Create Web Service**. Wait for the first build (several minutes). Open the **`.onrender.com` URL** when deploy is live.
 
 Render sets **`PORT`** automatically; the Next.js image listens on that port.
@@ -66,8 +67,10 @@ Render sets **`PORT`** automatically; the Next.js image listens on that port.
 1. Sign up at [render.com](https://render.com) and connect your GitHub account.
 2. **New → Blueprint** (or **Web Service** with Docker).
 3. Select the repo; set root to the directory that contains `Dockerfile` (this `play` folder if that is the repo root).
-4. Render will detect `render.yaml` or use **Docker** with `Dockerfile` at repo root.
-5. Deploy. Note: free/starter instances may sleep when idle.
+4. Render will detect `render.yaml` or use **Docker** with `Dockerfile` at repo root. The blueprint attaches a 1 GB disk at `/var/data` for saved kundalis (`KUNDALI_DB_PATH=/var/data/saved_kundalis.sqlite`).
+5. Deploy. Persistent disks need a paid instance. Free/starter instances may also sleep when idle.
+
+If this web service already exists **without** a disk: in the Render dashboard add a disk named `kundli-data`, mount path `/var/data`, size 1 GB, set `KUNDALI_DB_PATH=/var/data/saved_kundalis.sqlite`, then redeploy. Do not mount over `/app/data` — that directory holds the planetary history SQLite copied into the image.
 
 Optional env var: `PHOTON_API_URL` — base URL for a [self-hosted Photon](https://github.com/komoot/photon) instance.
 
@@ -134,5 +137,7 @@ You can also use **New → Blueprint** and point at this repo so [`render.yaml`]
 |----------|--------|---------|
 | `PHOTON_API_URL` | Server (optional) | Photon geocoder base URL; default is komoot’s public API. |
 | `PORT` | Container | Set automatically by most platforms (default `3000` in Docker). |
+| `KUNDALI_DB_PATH` | Server | SQLite file for saved/family kundalis. Production default: `/var/data/saved_kundalis.sqlite` (Render disk). Local default: `data/saved_kundalis.sqlite`. |
+| `KUNDALI_STORE_PATH` | Server (optional) | Legacy JSON path. If present and the SQLite file is empty, rows are imported once. |
 
 Client-side env vars are not required for the current Photon/timezone flow (those use same-origin `/api/*`).

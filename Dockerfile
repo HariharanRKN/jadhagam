@@ -38,9 +38,14 @@ COPY --from=builder /app/kundli-ui/.next/standalone ./
 COPY --from=builder /app/kundli-ui/.next/static ./.next/static
 COPY --from=builder /app/kundli-ui/public ./public
 
+RUN mkdir -p /var/data
+
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV KUNDALI_STORE_PATH=/app/data/saved_kundalis.json
+# Persistent on Render when the service disk is mounted at /var/data.
+# Do not use /app/data — that path is copied from the image and is replaced on deploy.
+ENV KUNDALI_DB_PATH=/var/data/saved_kundalis.sqlite
+ENV KUNDALI_STORE_PATH=/var/data/saved_kundalis.json
 # Render free web services are 512MB. Leave headroom for one PyJHora child.
 ENV NODE_OPTIONS=--max-old-space-size=192
 ENV MALLOC_ARENA_MAX=2

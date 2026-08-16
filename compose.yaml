@@ -8,5 +8,11 @@ services:
       NODE_ENV: production
       NODE_OPTIONS: --max-old-space-size=192
       MALLOC_ARENA_MAX: "2"
+      KUNDALI_DB_PATH: /var/data/saved_kundalis.sqlite
       # Optional: override Photon backend (default: https://photon.komoot.io)
       # PHOTON_API_URL: https://your-photon.example.com
+    volumes:
+      - kundli-data:/var/data
+
+volumes:
+  kundli-data:
