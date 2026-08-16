@@ -43,17 +43,27 @@ const MARRIAGE_HOUSE_ROLES: PeriodMatchRole[] = [
 
 export const MARRIAGE_ADULT_AGE_YEARS = 22;
 export const MARRIAGE_MAX_AGE_YEARS = 40;
+export const KOCHAR_SLICE_MONTHS = 6;
+export const KOCHAR_NEAR_TOP_POINTS = 5;
+
+export type DateSlice = {
+  start: string;
+  end: string | null;
+};
 
 export type MarriageBhuktiWindow = {
   maha: number;
   bhukti: number;
   start: string;
   end: string | null;
+  bhuktiStart: string;
+  bhuktiEnd: string | null;
   matchedRoles: PeriodMatchRole[];
   dashaScore: number;
   score: number;
   verdict: "strong" | "supportive" | "weak";
   notes: string[];
+  dashaNotes: string[];
   kocharScore?: number;
   kocharHits?: KocharHit[];
   kocharApplied: boolean;
@@ -66,6 +76,117 @@ function clampScore(value: number): number {
 function addYearsIso(isoDate: string, years: number): string {
   const [year, month, day] = isoDateKey(isoDate).split("-").map(Number);
   return `${year + years}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function daysInMonth(year: number, month: number): number {
+  const lengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  return month === 2 && leap ? 29 : lengths[month - 1] ?? 30;
+}
+
+export function addMonthsIso(isoDate: string, months: number): string {
+  const [year, month, day] = isoDateKey(isoDate).split("-").map(Number);
+  const total = year * 12 + (month - 1) + months;
+  const nextYear = Math.floor(total / 12);
+  const nextMonth = (total % 12) + 1;
+  const nextDay = Math.min(day, daysInMonth(nextYear, nextMonth));
+  return `${nextYear}-${pad2(nextMonth)}-${pad2(nextDay)}`;
+}
+
+export function listSixMonthSlices(start: string, end: string | null): DateSlice[] {
+  const from = isoDateKey(start);
+  const until = end ? isoDateKey(end) : "";
+  if (!from) return [];
+  if (!until || until <= from) return [{ start: from, end: end ? until : null }];
+  if (addMonthsIso(from, KOCHAR_SLICE_MONTHS) >= until) {
+    return [{ start: from, end: until }];
+  }
+  const slices: DateSlice[] = [];
+  let cursor = from;
+  while (cursor < until) {
+    const next = addMonthsIso(cursor, KOCHAR_SLICE_MONTHS);
+    slices.push({ start: cursor, end: next < until ? next : until });
+    cursor = next;
+  }
+  return slices;
+}
+
+export function collectMarriageKocharSampleDates(windows: MarriageBhuktiWindow[]): string[] {
+  const dates = new Set<string>();
+  for (const row of windows) {
+    const periodStart = isoDateKey(row.bhuktiStart ?? row.start);
+    const periodEnd = row.bhuktiEnd ?? row.end;
+    for (const slice of listSixMonthSlices(periodStart, periodEnd)) {
+      if (slice.start) dates.add(slice.start);
+    }
+  }
+  return Array.from(dates).sort();
+}
+
+export function selectNearTopByScore<T>(
+  items: T[],
+  getScore: (item: T) => number,
+  band = KOCHAR_NEAR_TOP_POINTS
+): T[] {
+  if (!items.length) return [];
+  const max = Math.max(...items.map(getScore));
+  return items.filter((item) => getScore(item) >= max - band);
+}
+
+function sourceKey(row: MarriageBhuktiWindow): string {
+  return `${row.maha}-${row.bhukti}-${isoDateKey(row.bhuktiStart ?? row.start)}`;
+}
+
+function dashaBaseWindow(row: MarriageBhuktiWindow): MarriageBhuktiWindow {
+  const dashaNotes = row.dashaNotes ?? row.notes;
+  return {
+    ...row,
+    score: row.dashaScore ?? row.score,
+    verdict: row.dashaScore >= 65 ? "strong" : row.dashaScore >= 35 ? "supportive" : "weak",
+    notes: dashaNotes,
+    dashaNotes,
+    kocharApplied: false,
+    kocharScore: undefined,
+    kocharHits: undefined,
+  };
+}
+
+export function narrowSlicesByKochar(
+  original: MarriageBhuktiWindow,
+  scoredSlices: MarriageBhuktiWindow[]
+): MarriageBhuktiWindow[] {
+  const withSky = scoredSlices.filter((slice) => slice.kocharApplied);
+  const pool = withSky.length ? withSky : scoredSlices;
+  const winners = selectNearTopByScore(pool, (slice) => slice.kocharScore ?? -1);
+  if (!winners.length) {
+    return [
+      {
+        ...original,
+        bhuktiStart: original.bhuktiStart ?? original.start,
+        bhuktiEnd: original.bhuktiEnd ?? original.end,
+      },
+    ];
+  }
+  const topScore = winners[0].kocharScore ?? 0;
+  const allEqual = winners.every((slice) => (slice.kocharScore ?? 0) === topScore);
+  const restoreFullPeriod = (row: MarriageBhuktiWindow): MarriageBhuktiWindow => ({
+    ...row,
+    start: original.bhuktiStart ?? original.start,
+    end: original.bhuktiEnd ?? original.end,
+    bhuktiStart: original.bhuktiStart ?? original.start,
+    bhuktiEnd: original.bhuktiEnd ?? original.end,
+  });
+  if (winners.length === 1 && pool.length > 1) {
+    return winners;
+  }
+  if (allEqual || winners.length <= 1) {
+    return [restoreFullPeriod(winners[0])];
+  }
+  return [...winners].sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }));
 }
 
 function rasiForHouse(ascendantRasi: number, houseNumber: 3 | 7 | 11): number {
@@ -215,11 +336,14 @@ export function listMarriageBhuktiWindows(
         bhukti: row.lord,
         start: row.start,
         end: row.end,
+        bhuktiStart: row.start,
+        bhuktiEnd: row.end,
         matchedRoles: roleList,
         dashaScore: scored.score,
         score: scored.score,
         verdict: scored.verdict,
         notes: scored.notes,
+        dashaNotes: scored.notes,
         kocharApplied: false,
       };
     })
@@ -232,9 +356,10 @@ export function applyMoonKocharToBhuktiWindow(
   transitPlanets: TransitRasiPlanet[],
   lang: MarriageLang = "en"
 ): MarriageBhuktiWindow {
+  const base = dashaBaseWindow(row);
   const kochar = evaluateMoonMarriageKochar(natalPlanets, transitPlanets, lang);
-  const mixed = mixDashaWithMoonKochar(row, kochar);
-  return { ...mixed, kocharApplied: true };
+  const mixed = mixDashaWithMoonKochar(base, kochar);
+  return { ...mixed, dashaNotes: base.dashaNotes, kocharApplied: true };
 }
 
 function snapshotsByIsoDate(
@@ -255,10 +380,28 @@ export function overlayMoonKocharOnWindows(
   lang: MarriageLang = "en"
 ): MarriageBhuktiWindow[] {
   const byDate = snapshotsByIsoDate(snapshotsByDate);
-  return windows.map((row) => {
-    const transitPlanets = byDate.get(isoDateKey(row.start));
-    if (!transitPlanets?.length) return row;
-    return applyMoonKocharToBhuktiWindow(row, natalPlanets, transitPlanets, lang);
+  return windows.flatMap((row) => {
+    const periodStart = isoDateKey(row.bhuktiStart ?? row.start);
+    const periodEnd = row.bhuktiEnd ?? row.end;
+    const base = {
+      ...dashaBaseWindow(row),
+      bhuktiStart: periodStart,
+      bhuktiEnd: periodEnd,
+      start: periodStart,
+      end: periodEnd,
+    };
+    const slices = listSixMonthSlices(periodStart, periodEnd);
+    const scoredSlices = slices.map((slice) => {
+      const sliceRow: MarriageBhuktiWindow = {
+        ...base,
+        start: slice.start,
+        end: slice.end,
+      };
+      const transitPlanets = byDate.get(slice.start);
+      if (!transitPlanets?.length) return sliceRow;
+      return applyMoonKocharToBhuktiWindow(sliceRow, natalPlanets, transitPlanets, lang);
+    });
+    return narrowSlicesByKochar(base, scoredSlices);
   });
 }
 
@@ -267,11 +410,29 @@ export function currentBhuktiWindow(
   asOfIso: string
 ): MarriageBhuktiWindow | null {
   const asOf = isoDateKey(asOfIso);
+  const annotated = windows.map((row) => ({
+    row,
+    key: sourceKey(row),
+    sourceStart: isoDateKey(row.bhuktiStart ?? row.start),
+    sliceStart: isoDateKey(row.start),
+    sliceEnd: row.end ? isoDateKey(row.end) : "9999-12-31",
+  }));
+  const runningKey = [...annotated]
+    .filter((item) => item.sourceStart <= asOf)
+    .sort((a, b) => a.sourceStart.localeCompare(b.sourceStart, "en", { numeric: true }))
+    .at(-1)?.key;
+  if (!runningKey) return null;
+  const ofSource = annotated.filter((item) => item.key === runningKey);
+  const containing = ofSource.filter(
+    (item) => item.sliceStart <= asOf && asOf < item.sliceEnd
+  );
+  const pick = containing.length ? containing : ofSource;
   return (
-    [...windows]
-      .filter((row) => isoDateKey(row.start) <= asOf)
-      .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }))
-      .at(-1) ?? null
+    [...pick].sort((a, b) => {
+      const scoreDelta = (b.row.kocharScore ?? -1) - (a.row.kocharScore ?? -1);
+      if (scoreDelta) return scoreDelta;
+      return a.sliceStart.localeCompare(b.sliceStart, "en", { numeric: true });
+    })[0]?.row ?? null
   );
 }
 
