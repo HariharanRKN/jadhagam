@@ -178,20 +178,26 @@ export default function MarriageTwoPage() {
 
             <article className={styles.signalCard}>
               <h3>{t("marriage2.guruKochar")}</h3>
-              {prediction.guruKochar ? (
+              {prediction.marriageKochar ? (
                 <>
                   <p>
-                    {t("marriage2.transitHouse")}: {prediction.guruKochar.transitHouseFromAsc}
+                    {t("marriage2.transitHouse")}:{" "}
+                    {prediction.guruKochar?.transitHouseFromAsc ?? "—"}
                   </p>
                   <p className={styles.signalValue}>
-                    {prediction.guruKochar.favorable
+                    {prediction.marriageKochar.favorable
                       ? t("marriage2.guruTriggerYes")
                       : t("marriage2.guruTriggerNo")}
                   </p>
                   <ul className={styles.compactList}>
-                    {prediction.guruKochar.notes.map((note) => (
-                      <li key={note}>{note}</li>
-                    ))}
+                    {prediction.marriageKochar.hits
+                      .filter((hit) => hit.weight > 0)
+                      .slice(0, 8)
+                      .map((hit, index) => (
+                        <li key={`${hit.role}-${hit.target}-${hit.mode}-${index}`}>
+                          {hit.note}
+                        </li>
+                      ))}
                   </ul>
                 </>
               ) : (
