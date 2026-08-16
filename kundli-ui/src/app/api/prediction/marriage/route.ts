@@ -1,6 +1,8 @@
 import { buildMarriagePrediction } from "@/lib/prediction/events";
+import { loadTransitPlanetsByDate } from "@/lib/history/loadPositions";
 import type { MarriageLang } from "@/lib/prediction/events/marriageLocale";
 import type { ChartDataPayload } from "@/types/chartData";
+import { listMarriageBhuktiWindows } from "@/lib/prediction/events";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -40,5 +42,8 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.json(buildMarriagePrediction(chart, language));
+  const windows = listMarriageBhuktiWindows(chart, language);
+  const dates = Array.from(new Set(windows.map((row) => row.start.slice(0, 10))));
+  const transitsByDate = await loadTransitPlanetsByDate(dates);
+  return Response.json(buildMarriagePrediction(chart, language, undefined, transitsByDate));
 }

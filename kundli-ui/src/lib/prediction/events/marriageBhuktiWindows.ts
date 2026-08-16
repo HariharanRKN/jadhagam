@@ -236,6 +236,32 @@ export function applyMoonKocharToBhuktiWindow(
   return { ...mixed, kocharApplied: true };
 }
 
+export function overlayMoonKocharOnWindows(
+  windows: MarriageBhuktiWindow[],
+  natalPlanets: ChartDataPayload["natalPlanets"],
+  snapshotsByDate: Map<string, TransitRasiPlanet[]>,
+  lang: MarriageLang = "en"
+): MarriageBhuktiWindow[] {
+  return windows.map((row) => {
+    const transitPlanets = snapshotsByDate.get(row.start.slice(0, 10));
+    if (!transitPlanets?.length) return row;
+    return applyMoonKocharToBhuktiWindow(row, natalPlanets, transitPlanets, lang);
+  });
+}
+
+export function currentBhuktiWindow(
+  windows: MarriageBhuktiWindow[],
+  asOfIso: string
+): MarriageBhuktiWindow | null {
+  const asOf = asOfIso.slice(0, 10);
+  return (
+    [...windows]
+      .filter((row) => row.start.slice(0, 10) <= asOf)
+      .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }))
+      .at(-1) ?? null
+  );
+}
+
 export function formatBhuktiRoles(lang: MarriageLang, roles: PeriodMatchRole[]): string {
   return formatMatchedRoles(lang, roles);
 }

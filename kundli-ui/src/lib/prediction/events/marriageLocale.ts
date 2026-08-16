@@ -151,8 +151,8 @@ export const mp = {
 
   periodSummaryNone(lang: MarriageLang): string {
     return lang === "en"
-      ? "No active antara row was resolved for the current date."
-      : "தற்போதைய தேதிக்கு செயலில் உள்ள அந்தர வரிசை கண்டறியப்படவில்லை.";
+      ? "No active dasha/bhukti window was resolved for the current date in the age 22–40 marriage range."
+      : "22–40 வயது திருமண வரம்பில் தற்போதைய தேதிக்கு செயலில் உள்ள தசை/புக்தி காலம் கண்டறியப்படவில்லை.";
   },
 
   guruKocharIn(lang: MarriageLang, signName: string, house: number): string {

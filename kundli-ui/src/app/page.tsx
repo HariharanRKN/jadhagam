@@ -12,10 +12,9 @@ import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
 import { useTranslations } from "@/i18n/useTranslations";
 import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
 import {
-  applyMoonKocharToBhuktiWindow,
   buildMarriagePrediction,
   collectMarriageBhavaReadings,
-  listMarriageBhuktiWindows,
+  overlayMoonKocharOnWindows,
 } from "@/lib/prediction/events";
 import type { MarriageBhuktiWindow } from "@/lib/prediction/events";
 import type { ChartDataPayload } from "@/types/chartData";
@@ -309,29 +308,26 @@ export default function Home() {
     return {
       analysisRows,
       prediction: buildMarriagePrediction(data, language, todayIso),
-      bhuktiWindows: listMarriageBhuktiWindows(data, language),
     };
   }, [data, todayIso, language]);
 
   const overlayedMarriageWindows = useMemo((): MarriageBhuktiWindow[] => {
     if (!data || !marriageDerived) return [];
     const snapshotsByDate = new Map(
-      marriageSnapshots.map((snapshot) => [snapshot.dateIst, snapshot])
+      marriageSnapshots.map((snapshot) => [
+        snapshot.dateIst,
+        Object.values(snapshot.positions).map((planet) => ({
+          planetId: planet.planetId,
+          rasi: planet.rasi,
+        })),
+      ])
     );
-    return marriageDerived.bhuktiWindows.map((row) => {
-      const snapshot = snapshotsByDate.get(row.start.slice(0, 10));
-      if (!snapshot) return row;
-      const transitPlanets = Object.values(snapshot.positions).map((planet) => ({
-        planetId: planet.planetId,
-        rasi: planet.rasi,
-      }));
-      return applyMoonKocharToBhuktiWindow(
-        row,
-        data.natalPlanets,
-        transitPlanets,
-        language
-      );
-    });
+    return overlayMoonKocharOnWindows(
+      marriageDerived.prediction.periodSequence.windows,
+      data.natalPlanets,
+      snapshotsByDate,
+      language
+    );
   }, [data, language, marriageDerived, marriageSnapshots]);
 
   const currentMarriageBhukti = useMemo(() => {
@@ -437,7 +433,7 @@ export default function Home() {
   }, [trackerDate]);
 
   useEffect(() => {
-    const windows = marriageDerived?.bhuktiWindows;
+    const windows = marriageDerived?.prediction.periodSequence.windows;
     if (!windows?.length) {
       setMarriageSnapshots([]);
       setMarriageLoading(false);

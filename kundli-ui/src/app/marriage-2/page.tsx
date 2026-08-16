@@ -12,10 +12,6 @@ import type { MarriagePrediction } from "@/lib/prediction/events";
 import { lordEnglish, lordTamil } from "@/lib/tamilDasha";
 import styles from "./page.module.css";
 
-function rasiForHouse(ascendantRasi: number, houseNumber: 3 | 7 | 11) {
-  return (ascendantRasi + houseNumber - 1) % 12;
-}
-
 function verdictLabel(
   v: "strong" | "supportive" | "weak",
   t: (k: string) => string
@@ -49,9 +45,16 @@ export default function MarriageTwoPage() {
 
   const highlightedRasis = useMemo(() => {
     if (!chart) return [];
-    return [3, 7, 11].map((house) =>
-      rasiForHouse(chart.birth.ascendantRasi, house as 3 | 7 | 11)
+    const fromLagna = [3, 7, 11].map(
+      (house) => (chart.birth.ascendantRasi + house - 1) % 12
     );
+    const moonRasi = chart.natalPlanets.find((planet) => planet.planetId === 1)
+      ?.rasi;
+    const fromMoon =
+      moonRasi == null
+        ? []
+        : [3, 7, 11].map((house) => (moonRasi + house - 1) % 12);
+    return Array.from(new Set([...fromLagna, ...fromMoon]));
   }, [chart]);
 
   function handleChartSuccess(nextChart: ChartDataPayload) {
@@ -178,19 +181,18 @@ export default function MarriageTwoPage() {
 
             <article className={styles.signalCard}>
               <h3>{t("marriage2.guruKochar")}</h3>
-              {prediction.marriageKochar ? (
+              {prediction.moonKochar ? (
                 <>
-                  <p>
-                    {t("marriage2.transitHouse")}:{" "}
-                    {prediction.guruKochar?.transitHouseFromAsc ?? "—"}
-                  </p>
                   <p className={styles.signalValue}>
-                    {prediction.marriageKochar.favorable
+                    {prediction.moonKochar.guruLinked
                       ? t("marriage2.guruTriggerYes")
                       : t("marriage2.guruTriggerNo")}
                   </p>
+                  <p>
+                    {t("marriage2.scoreLabel")} {prediction.moonKochar.score}
+                  </p>
                   <ul className={styles.compactList}>
-                    {prediction.marriageKochar.hits
+                    {prediction.moonKochar.hits
                       .filter((hit) => hit.weight > 0)
                       .slice(0, 8)
                       .map((hit, index) => (
@@ -370,13 +372,15 @@ export default function MarriageTwoPage() {
                       {t("marriage2.mahaLabel")}{" "}
                       {lordName(language, prediction.periodSequence.current.maha)} •{" "}
                       {t("marriage2.bhuktiLabel")}{" "}
-                      {lordName(language, prediction.periodSequence.current.bhukti)} •{" "}
-                      {t("marriage2.antaraLabel")}{" "}
-                      {lordName(language, prediction.periodSequence.current.antara)}
+                      {lordName(language, prediction.periodSequence.current.bhukti)}
                     </p>
                     <p>
-                      {t("marriage2.scoreLabel")} {prediction.periodSequence.current.score} •{" "}
-                      {verdictLabel(prediction.periodSequence.current.verdict, t)}
+                      {t("marriage2.scoreLabel")}{" "}
+                      {prediction.periodSequence.current.score}
+                      {prediction.periodSequence.current.kocharApplied
+                        ? ` (${prediction.periodSequence.current.dashaScore}+${prediction.periodSequence.current.kocharScore})`
+                        : ""}{" "}
+                      • {verdictLabel(prediction.periodSequence.current.verdict, t)}
                     </p>
                     <ul className={styles.compactList}>
                       {prediction.periodSequence.current.notes.map((item) => (
@@ -391,21 +395,35 @@ export default function MarriageTwoPage() {
               <div>
                 <h3>{t("marriage2.upcomingWindows")}</h3>
                 <div className={styles.sequenceList}>
-                  {prediction.periodSequence.upcoming.map((row) => (
+                  {prediction.periodSequence.windows.map((row) => (
                     <div
-                      key={`${row.start}-${row.maha}-${row.bhukti}-${row.antara}`}
+                      key={`${row.start}-${row.maha}-${row.bhukti}`}
                       className={styles.sequenceCard}
                     >
                       <strong>
-                        {row.start.slice(0, 10)} • {verdictLabel(row.verdict, t)}
+                        {row.start.slice(0, 10)} • {lordName(language, row.maha)}/
+                        {lordName(language, row.bhukti)} •{" "}
+                        {verdictLabel(row.verdict, t)}
                       </strong>
                       <p>
                         {t("marriage2.scoreLabel")} {row.score}
+                        {row.kocharApplied
+                          ? ` (${row.dashaScore}+${row.kocharScore})`
+                          : ""}
                       </p>
                       <p>
                         {formatMatchedRoles(language, row.matchedRoles) ||
                           t("marriage2.noMarriageRoles")}
                       </p>
+                      {row.kocharHits?.filter((hit) => hit.weight > 0).length ? (
+                        <p>
+                          {row.kocharHits
+                            .filter((hit) => hit.weight > 0)
+                            .slice(0, 2)
+                            .map((hit) => hit.note)
+                            .join(" · ")}
+                        </p>
+                      ) : null}
                     </div>
                   ))}
                 </div>
