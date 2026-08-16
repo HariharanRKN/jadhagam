@@ -37,9 +37,9 @@ COPY --from=builder /app/kundli-ui/.next/static ./.next/static
 COPY --from=builder /app/kundli-ui/public ./public
 
 ENV NODE_ENV=production
-ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
-
+# Render (and other hosts) set HOSTNAME to the container name. Next.js standalone
+# binds to process.env.HOSTNAME, so force 0.0.0.0 at process start.
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "HOSTNAME=0.0.0.0 exec node server.js"]
