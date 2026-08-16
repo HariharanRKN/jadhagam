@@ -8,6 +8,13 @@ import {
   rasiName,
   type MarriageLang,
 } from "./marriageLocale";
+import {
+  applyKocharToMarriageRow,
+  evaluateMarriageKochar,
+  type GuruKocharReading,
+  type KocharHit,
+  type MarriageKocharReading,
+} from "./marriageKochar";
 
 type MarriageHouseNumber = 3 | 7 | 11;
 
@@ -47,14 +54,6 @@ type PlanetPlacementReading = {
   shaniInfluence: InfluenceCheck;
 };
 
-type GuruKocharReading = {
-  transitHouseFromAsc: HouseNumber;
-  looksAtSeventhHouse: boolean;
-  looksAtEleventhHouse: boolean;
-  favorable: boolean;
-  notes: string[];
-};
-
 export type PeriodMatchRole =
   | "3rd-lord"
   | "7th-lord"
@@ -69,9 +68,12 @@ export type MarriageSequenceRow = {
   start: string;
   end: string | null;
   matchedRoles: PeriodMatchRole[];
+  dashaScore: number;
   score: number;
   verdict: "strong" | "supportive" | "weak";
   notes: string[];
+  kocharScore?: number;
+  kocharHits?: KocharHit[];
 };
 
 type MarriageFoundation = {
@@ -104,6 +106,7 @@ export type MarriagePrediction = {
   };
   foundation: MarriageFoundation;
   guruKochar: GuruKocharReading | null;
+  marriageKochar: MarriageKocharReading;
   periodSequence: MarriagePeriodSequence;
   reasoning: {
     positives: string[];
@@ -442,6 +445,7 @@ function buildMarriageSequence(
       start: row.start,
       end: row.end,
       matchedRoles: roleList,
+      dashaScore: score,
       score,
       verdict,
       notes,
@@ -492,27 +496,6 @@ function buildMarriageSequence(
   };
 }
 
-function buildGuruKochar(chart: ChartDataPayload, lang: MarriageLang): GuruKocharReading | null {
-  const guru = chart.transitPlanets.find((planet) => planet.planetId === 4);
-  if (!guru) return null;
-  const transitHouseFromAsc = houseFromRasi(chart.birth.ascendantRasi, guru.rasi);
-  const targets = grahaDrishtiTargets(4, transitHouseFromAsc);
-  const looksAtSeventhHouse = targets.includes(7) || transitHouseFromAsc === 7;
-  const looksAtEleventhHouse = targets.includes(11) || transitHouseFromAsc === 11;
-  const favorable = looksAtSeventhHouse || looksAtEleventhHouse;
-  const notes = [mp.guruKocharIn(lang, rasiName(lang, guru.rasi), transitHouseFromAsc)];
-  if (looksAtSeventhHouse) notes.push(mp.guruLooks7(lang));
-  if (looksAtEleventhHouse) notes.push(mp.guruLooks11(lang));
-  if (!favorable) notes.push(mp.guruNotSupporting(lang));
-  return {
-    transitHouseFromAsc,
-    looksAtSeventhHouse,
-    looksAtEleventhHouse,
-    favorable,
-    notes,
-  };
-}
-
 export function buildMarriagePrediction(
   chart: ChartDataPayload,
   lang: MarriageLang = "en",
@@ -539,8 +522,38 @@ export function buildMarriagePrediction(
   const seventhLord = buildPlacementReading(chart, seventhLordRow, seventhLordLabel, lang);
   const shukraKarakathuva = buildPlacementReading(chart, shukraRow, shukraLabel, lang);
   const guruKarakathuva = buildPlacementReading(chart, guruRow, guruLabel, lang);
-  const guruKochar = buildGuruKochar(chart, lang);
-  const periodSequence = buildMarriageSequence(chart, lordMap, lang, asOfIso);
+  const marriageKochar = evaluateMarriageKochar(
+    chart.birth.ascendantRasi,
+    chart.natalPlanets,
+    chart.transitPlanets,
+    lang
+  );
+  const guruKochar = marriageKochar.guru;
+  let periodSequence = buildMarriageSequence(chart, lordMap, lang, asOfIso);
+  if (periodSequence.current) {
+    const current = applyKocharToMarriageRow(
+      periodSequence.current,
+      marriageKochar
+    );
+    periodSequence = {
+      ...periodSequence,
+      current,
+      notableWindows: periodSequence.notableWindows.map((row) =>
+        row.start === current.start &&
+        row.maha === current.maha &&
+        row.bhukti === current.bhukti &&
+        row.antara === current.antara
+          ? current
+          : row
+      ),
+      summary: mp.periodSummaryCurrent(
+        lang,
+        current.verdict,
+        current.score,
+        formatMatchedRoles(lang, current.matchedRoles)
+      ),
+    };
+  }
 
   const houseAverage =
     marriageHouses.reduce((sum, house) => sum + house.aggregateScore, 0) / marriageHouses.length;
@@ -551,7 +564,9 @@ export function buildMarriagePrediction(
       (guruKarakathuva?.strength ?? 0) * 0.1
   );
   const activationScore = clampScore(
-    (periodSequence.current?.score ?? 0) * 0.7 + (guruKochar?.favorable ? 24 : 0)
+    periodSequence.current
+      ? periodSequence.current.score
+      : marriageKochar.score * 0.5
   );
 
   const positives = [
@@ -574,10 +589,12 @@ export function buildMarriagePrediction(
   if (seventhLord?.shaniInfluence.present) challenges.push(mp.chShani7th(lang));
   if (shukraKarakathuva?.rahuInfluence.present) challenges.push(mp.chRahuShukra(lang));
   if (shukraKarakathuva?.shaniInfluence.present) challenges.push(mp.chShaniShukra(lang));
-  if (guruKochar?.favorable) {
-    positives.push(mp.posGuruKochar(lang));
-  } else if (guruKochar) {
-    challenges.push(mp.chGuruKochar(lang));
+  if (marriageKochar.favorable) {
+    positives.push(mp.posKochar(lang));
+  } else if (marriageKochar.delayRisk) {
+    challenges.push(mp.chKocharDelay(lang));
+  } else {
+    challenges.push(mp.chKochar(lang));
   }
 
   const foundationSummaryParts = [mp.foundationOpen(lang)];
@@ -605,7 +622,7 @@ export function buildMarriagePrediction(
     mp.overviewStrength(lang, foundationScore),
     mp.overviewActivation(lang, activationScore),
     periodSequence.summary,
-    guruKochar?.favorable ? mp.overviewGuruYes(lang) : mp.overviewGuruNo(lang),
+    marriageKochar.favorable ? mp.overviewKocharYes(lang) : mp.overviewKocharNo(lang),
   ].join(" ");
 
   return {
@@ -625,6 +642,7 @@ export function buildMarriagePrediction(
       challenges: challenges.slice(0, 8),
     },
     guruKochar,
+    marriageKochar,
     periodSequence,
     reasoning: {
       positives: positives.slice(0, 10),

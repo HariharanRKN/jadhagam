@@ -252,16 +252,123 @@ export const mp = {
       : `தற்போதைய செயல்பாட்டு மதிப்பெண் ${score}.`;
   },
 
-  overviewGuruYes(lang: MarriageLang): string {
+  overviewKocharYes(lang: MarriageLang): string {
     return lang === "en"
-      ? "Guru kochar is currently acting as a marriage trigger."
-      : "குரு கோசாரம் தற்போது திருமணத் தூண்டுதலாகச் செயல்படுகிறது.";
+      ? "Kochar karakas are currently supporting a marriage trigger."
+      : "கோசார கரகர்கள் தற்போது திருமணத் தூண்டுதலை ஆதரிக்கின்றனர்.";
   },
 
-  overviewGuruNo(lang: MarriageLang): string {
+  overviewKocharNo(lang: MarriageLang): string {
     return lang === "en"
-      ? "Guru kochar is not currently acting as a marriage trigger."
-      : "குரு கோசாரம் தற்போது திருமணத் தூண்டுதலாகச் செயல்படவில்லை.";
+      ? "Kochar karakas are not currently supporting a marriage trigger."
+      : "கோசார கரகர்கள் தற்போது திருமணத் தூண்டுதலை ஆதரிக்கவில்லை.";
+  },
+
+  posKochar(lang: MarriageLang): string {
+    return lang === "en"
+      ? "Transit Guru, Shukra, or 7th lord is activating marriage houses or natal karakas."
+      : "கோசார குரு, சுக்கிரன் அல்லது 7ஆம் அதிபதி திருமண பாவங்கள் அல்லது ஜனன கரகர்களைத் தூண்டுகின்றனர்.";
+  },
+
+  chKochar(lang: MarriageLang): string {
+    return lang === "en"
+      ? "Transit Guru, Shukra, and 7th lord are not currently activating marriage houses."
+      : "கோசார குரு, சுக்கிரன், 7ஆம் அதிபதி தற்போது திருமண பாவங்களைத் தூண்டவில்லை.";
+  },
+
+  chKocharDelay(lang: MarriageLang): string {
+    return lang === "en"
+      ? "Saturn is on the 7th without Guru/Shukra/7th-lord support, which can delay marriage."
+      : "குரு/சுக்கிரன்/7ஆம் அதிபதி ஆதரவு இல்லாமல் சனி 7ஆம் பாவத்தில் இருப்பது திருமணத்தை தாமதப்படுத்தலாம்.";
+  },
+
+  kocharRole(lang: MarriageLang, role: string): string {
+    if (lang === "en") {
+      const m: Record<string, string> = {
+        guru: "Guru",
+        shukra: "Shukra",
+        "7th-lord": "7th lord",
+        "11th-lord": "11th lord",
+        shani: "Shani",
+        rahu: "Rahu",
+      };
+      return m[role] ?? role;
+    }
+    const m: Record<string, string> = {
+      guru: "குரு",
+      shukra: "சுக்கிரன்",
+      "7th-lord": "7ஆம் அதிபதி",
+      "11th-lord": "11ஆம் அதிபதி",
+      shani: "சனி",
+      rahu: "ராகு",
+    };
+    return m[role] ?? role;
+  },
+
+  kocharHouseHit(
+    lang: MarriageLang,
+    planet: string,
+    mode: string,
+    house: number
+  ): string {
+    const occupy = mode === "occupy";
+    return lang === "en"
+      ? occupy
+        ? `${planet} kochar occupies house ${house}.`
+        : `${planet} kochar aspects house ${house}.`
+      : occupy
+        ? `${planet} கோசாரம் ${house}ஆம் பாவத்தில் உள்ளார்.`
+        : `${planet} கோசாரம் ${house}ஆம் பாவத்தைப் பார்க்கிறார்.`;
+  },
+
+  kocharNatalHit(
+    lang: MarriageLang,
+    planet: string,
+    mode: string,
+    natalLabel: string
+  ): string {
+    const conjunct = mode === "natal-conjunct";
+    return lang === "en"
+      ? conjunct
+        ? `${planet} kochar is over ${natalLabel}.`
+        : `${planet} kochar aspects ${natalLabel}.`
+      : conjunct
+        ? `${planet} கோசாரம் ${natalLabel} மீது உள்ளார்.`
+        : `${planet} கோசாரம் ${natalLabel} மீது பார்வை பார்க்கிறார்.`;
+  },
+
+  kocharDusthana(lang: MarriageLang, planet: string, house: number): string {
+    return lang === "en"
+      ? `${planet} kochar is in dusthana house ${house}.`
+      : `${planet} கோசாரம் தூஸ்தான ${house}ஆம் பாவத்தில் உள்ளார்.`;
+  },
+
+  kocharRahuMixed(lang: MarriageLang, house: number): string {
+    return lang === "en"
+      ? `Rahu kochar on house ${house} can trigger an unconventional or sudden marriage event.`
+      : `ராகு கோசாரம் ${house}ஆம் பாவத்தில் இருப்பது திடீர் அல்லது வழக்கத்திற்கு மாறான திருமண நிகழ்வைத் தூண்டலாம்.`;
+  },
+
+  kocharCombo(lang: MarriageLang, key: string): string {
+    const en: Record<string, string> = {
+      "guru-shukra": "Guru and Shukra are both activating marriage from transit.",
+      "guru-7th": "Guru and the 7th lord are both activating marriage from transit.",
+      "shukra-7th": "Shukra and the 7th lord are both activating marriage from transit.",
+      "guru-shani": "Guru-Saturn double transit is confirming the 7th house.",
+    };
+    const ta: Record<string, string> = {
+      "guru-shukra": "குரு மற்றும் சுக்கிரன் இருவரும் கோசாரத்தில் திருமணத்தைத் தூண்டுகின்றனர்.",
+      "guru-7th": "குரு மற்றும் 7ஆம் அதிபதி இருவரும் கோசாரத்தில் திருமணத்தைத் தூண்டுகின்றனர்.",
+      "shukra-7th": "சுக்கிரன் மற்றும் 7ஆம் அதிபதி இருவரும் கோசாரத்தில் திருமணத்தைத் தூண்டுகின்றனர்.",
+      "guru-shani": "குரு-சனி இரட்டை கோசாரம் 7ஆம் பாவத்தை உறுதிப்படுத்துகிறது.",
+    };
+    return (lang === "en" ? en : ta)[key] ?? key;
+  },
+
+  kocharShaniDelay(lang: MarriageLang): string {
+    return lang === "en"
+      ? "Shani on the 7th without a supporting karaka can delay rather than complete marriage."
+      : "ஆதரவு கரகர் இல்லாமல் 7ஆம் பாவத்தில் சனி திருமணத்தை முடிப்பதற்கு பதிலாக தாமதப்படுத்தலாம்.";
   },
 
   roleLabel(lang: MarriageLang, role: string): string {
