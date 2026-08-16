@@ -11,6 +11,8 @@ import { DashaBhuktiTableTamil } from "@/components/tables/DashaBhuktiTableTamil
 import { VimsottariExpander } from "@/components/tables/VimsottariExpander";
 import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
 import { getMessage, interpolate, useTranslations } from "@/i18n/useTranslations";
+import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
+import { buildMarriagePrediction } from "@/lib/prediction/events";
 import type { AntaraRow, ChartDataPayload } from "@/types/chartData";
 import styles from "./page.module.css";
 
@@ -70,7 +72,7 @@ type MarriageTimingRow = AntaraRow & {
 type MarriagePermutationStatusRow = {
   permutationLabel: string;
   houseOrder: [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11];
-  occurred: boolean;
+  status: "occurred" | "upcoming" | "absent";
   firstMatch: MarriageTimingRow | null;
 };
 
@@ -200,6 +202,24 @@ function sameLordSequence(
 
 function formatPlanetList(values: string[], noneLabel: string) {
   return values.length ? values.join(", ") : noneLabel;
+}
+
+function permutationStatusLabel(
+  status: "occurred" | "upcoming" | "absent",
+  t: (key: string) => string
+) {
+  if (status === "occurred") return t("home.statusOccurred");
+  if (status === "upcoming") return t("home.statusUpcoming");
+  return t("home.statusNotYet");
+}
+
+function marriageVerdictLabel(
+  verdict: "strong" | "supportive" | "weak",
+  t: (key: string) => string
+) {
+  if (verdict === "strong") return t("home.verdictStrong");
+  if (verdict === "supportive") return t("home.verdictSupportive");
+  return t("home.verdictWeak");
 }
 
 function permutationLabelForRow(lang: LanguageCode, row: AntaraRow) {
@@ -457,8 +477,6 @@ export default function Home() {
       .map((row) => {
         const houseOrder = sameLordSequence(targetLordIds, row);
         if (!houseOrder) return null;
-        const startDateIso = row.start.slice(0, 10);
-        if (!startDateIso || startDateIso > todayIso) return null;
         return {
           ...row,
           houseOrder,
@@ -491,19 +509,27 @@ export default function Home() {
               row.houseOrder[1] === houseOrder[1] &&
               row.houseOrder[2] === houseOrder[2]
           ) ?? null;
+        let status: MarriagePermutationStatusRow["status"] = "absent";
+        if (firstMatch) {
+          status =
+            firstMatch.start.slice(0, 10) <= todayIso ? "occurred" : "upcoming";
+        }
         return {
           permutationLabel,
           houseOrder,
-          occurred: Boolean(firstMatch),
+          status,
           firstMatch,
         };
       });
+
+    const prediction = buildMarriagePrediction(data, language, todayIso);
 
     return {
       analysisRows,
       guruSukraRows,
       timingRows,
       permutationStatusRows,
+      prediction,
     };
   }, [data, todayIso, language]);
 
@@ -606,20 +632,30 @@ export default function Home() {
   }, [trackerDate]);
 
   useEffect(() => {
-    const timingRows = marriageDerived?.timingRows;
-    if (!timingRows?.length) {
+    const prediction = marriageDerived?.prediction;
+    if (!prediction) {
       setMarriageSnapshots([]);
       return;
     }
-    const availableTimingRows = timingRows;
+    const snapshotRows = [
+      prediction.periodSequence.current,
+      ...prediction.periodSequence.notableWindows.filter(
+        (row) => row.start !== prediction.periodSequence.current?.start
+      ),
+    ].filter((row): row is NonNullable<typeof row> => row !== null);
+    const uniqueDates = Array.from(
+      new Set(snapshotRows.map((row) => row.start.slice(0, 10)))
+    ).slice(0, 10);
+    if (!uniqueDates.length) {
+      setMarriageSnapshots([]);
+      return;
+    }
     let cancelled = false;
     async function loadMarriageSnapshots() {
       setMarriageLoading(true);
       try {
-        const firstTen = availableTimingRows.slice(0, 10);
         const snapshots = await Promise.all(
-          firstTen.map(async (row) => {
-            const dateOnly = row.start.slice(0, 10);
+          uniqueDates.map(async (dateOnly) => {
             const res = await fetch(
               `/api/history/positions?date=${encodeURIComponent(dateOnly)}`
             );
@@ -1170,6 +1206,86 @@ export default function Home() {
         <div className={styles.trackerWrap}>
           <section className={styles.trackerSection}>
             <div className={styles.sectionHeader}>
+              <h2>{t("home.marriageAssessmentTitle")}</h2>
+              <p>{t("home.marriageAssessmentDesc")}</p>
+            </div>
+            <p className={styles.inlineMeta}>
+              {marriageDerived.prediction.overview.summary}
+            </p>
+            <div className={styles.marriageScoreRow}>
+              <div className={styles.marriageScoreCard}>
+                <span className={styles.scoreLabel}>
+                  {t("home.marriageStrength")}
+                </span>
+                <strong>
+                  {marriageDerived.prediction.overview.marriageStrengthScore}
+                </strong>
+              </div>
+              <div className={styles.marriageScoreCard}>
+                <span className={styles.scoreLabel}>
+                  {t("home.marriageActivation")}
+                </span>
+                <strong>
+                  {marriageDerived.prediction.overview.activationScore}
+                </strong>
+              </div>
+              <div className={styles.marriageScoreCard}>
+                <span className={styles.scoreLabel}>{t("home.guruKochar")}</span>
+                <strong>
+                  {marriageDerived.prediction.guruKochar?.favorable
+                    ? t("home.guruTriggerYes")
+                    : t("home.guruTriggerNo")}
+                </strong>
+                {marriageDerived.prediction.guruKochar ? (
+                  <p className={styles.inlineMeta}>
+                    {t("home.transitHouse")}:{" "}
+                    {houseOrdinal(
+                      language,
+                      marriageDerived.prediction.guruKochar.transitHouseFromAsc
+                    )}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            {marriageDerived.prediction.periodSequence.current ? (
+              <p className={styles.inlineMeta}>
+                <strong>{t("home.currentPeriodHeading")}:</strong>{" "}
+                {lordName(
+                  language,
+                  marriageDerived.prediction.periodSequence.current.maha
+                )}{" "}
+                /{" "}
+                {lordName(
+                  language,
+                  marriageDerived.prediction.periodSequence.current.bhukti
+                )}{" "}
+                /{" "}
+                {lordName(
+                  language,
+                  marriageDerived.prediction.periodSequence.current.antara
+                )}{" "}
+                · {t("home.scoreLabel")}{" "}
+                {marriageDerived.prediction.periodSequence.current.score} ·{" "}
+                {marriageVerdictLabel(
+                  marriageDerived.prediction.periodSequence.current.verdict,
+                  t
+                )}
+                {marriageDerived.prediction.periodSequence.current.matchedRoles
+                  .length
+                  ? ` · ${formatMatchedRoles(
+                      language,
+                      marriageDerived.prediction.periodSequence.current
+                        .matchedRoles
+                    )}`
+                  : ""}
+              </p>
+            ) : (
+              <p className={styles.inlineMeta}>{t("home.noCurrentPeriod")}</p>
+            )}
+          </section>
+
+          <section className={styles.trackerSection}>
+            <div className={styles.sectionHeader}>
               <h2>{t("home.marriageBirthTitle")}</h2>
               <p>{t("home.marriageBirthDesc")}</p>
             </div>
@@ -1259,9 +1375,7 @@ export default function Home() {
                           .join(" → ")}
                       </td>
                       <td>
-                        {row.occurred
-                          ? t("home.statusOccurred")
-                          : t("home.statusNotYet")}
+                        {permutationStatusLabel(row.status, t)}
                       </td>
                       <td>{row.firstMatch ? row.firstMatch.start : "—"}</td>
                       <td>{row.firstMatch?.end ?? "—"}</td>
@@ -1276,6 +1390,75 @@ export default function Home() {
             <div className={styles.sectionHeader}>
               <h2>{t("home.dashaPeriodsTitle")}</h2>
               <p>{t("home.dashaPeriodsDesc")}</p>
+            </div>
+
+            <div className={styles.tableWrapCustom}>
+              <table className={styles.analysisTable}>
+                <thead>
+                  <tr>
+                    <th>{t("home.thRoles")}</th>
+                    <th>{t("home.mahadasha")}</th>
+                    <th>{t("home.bhukti")}</th>
+                    <th>{t("home.antara")}</th>
+                    <th>{t("home.scoreLabel")}</th>
+                    <th>{t("home.thStatus")}</th>
+                    <th>{t("home.thStart")}</th>
+                    <th>{t("home.thEnd")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {marriageDerived.prediction.periodSequence.notableWindows
+                    .length ? (
+                    marriageDerived.prediction.periodSequence.notableWindows.map(
+                      (row, index) => (
+                        <tr key={`${row.start}-${row.maha}-${row.bhukti}-${row.antara}-${index}`}>
+                          <td>
+                            {row.matchedRoles.length
+                              ? formatMatchedRoles(language, row.matchedRoles)
+                              : t("home.noMarriageRoles")}
+                          </td>
+                          <td>{lordName(language, row.maha)}</td>
+                          <td>{lordName(language, row.bhukti)}</td>
+                          <td>{lordName(language, row.antara)}</td>
+                          <td>
+                            {row.score} · {marriageVerdictLabel(row.verdict, t)}
+                          </td>
+                          <td>
+                            {(() => {
+                              const current =
+                                marriageDerived.prediction.periodSequence
+                                  .current;
+                              const isCurrent =
+                                Boolean(current) &&
+                                current!.start === row.start &&
+                                current!.maha === row.maha &&
+                                current!.bhukti === row.bhukti &&
+                                current!.antara === row.antara;
+                              if (isCurrent) return t("home.currentPeriodHeading");
+                              return row.start.slice(0, 10) <= todayIso
+                                ? t("home.statusOccurred")
+                                : t("home.statusUpcoming");
+                            })()}
+                          </td>
+                          <td>{row.start}</td>
+                          <td>{row.end ?? "—"}</td>
+                        </tr>
+                      )
+                    )
+                  ) : (
+                    <tr>
+                      <td colSpan={8}>{t("home.noSuchPeriods")}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className={styles.trackerSection}>
+            <div className={styles.sectionHeader}>
+              <h2>{t("home.strictPermutationTitle")}</h2>
+              <p>{t("home.strictPermutationDesc")}</p>
             </div>
 
             <div className={styles.tableWrapCustom}>
@@ -1301,7 +1484,9 @@ export default function Home() {
                         <td>{lordName(language, row.lord)}</td>
                         <td>
                           {row.houseOrder
-                            .map((houseNumber) => houseOrdinal(language, houseNumber))
+                            .map((houseNumber) =>
+                              houseOrdinal(language, houseNumber)
+                            )
                             .join(" → ")}
                         </td>
                         <td>{row.start}</td>
