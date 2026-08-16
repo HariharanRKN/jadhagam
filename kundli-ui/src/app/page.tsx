@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { LanguageCode } from "@/components/LanguageProvider";
 import { SouthIndianChart } from "@/components/SouthIndianChart/SouthIndianChart";
 import { BirthInputForm } from "@/components/BirthInputForm";
 import { BirthTimeIdentifier } from "@/components/BirthTimeIdentifier";
@@ -10,15 +9,16 @@ import { PlanetaryTableTamil } from "@/components/tables/PlanetaryTableTamil";
 import { DashaBhuktiTableTamil } from "@/components/tables/DashaBhuktiTableTamil";
 import { VimsottariExpander } from "@/components/tables/VimsottariExpander";
 import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
-import { getMessage, interpolate, useTranslations } from "@/i18n/useTranslations";
+import { useTranslations } from "@/i18n/useTranslations";
 import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
 import {
   applyKocharToMarriageRow,
   buildMarriagePrediction,
+  collectMarriageBhavaReadings,
   evaluateMarriageKochar,
 } from "@/lib/prediction/events";
 import type { MarriageSequenceRow } from "@/lib/prediction/events";
-import type { AntaraRow, ChartDataPayload } from "@/types/chartData";
+import type { ChartDataPayload } from "@/types/chartData";
 import styles from "./page.module.css";
 
 type TrackerTab = "kundli" | "kochar" | "marriage" | "family" | "birthTime";
@@ -56,29 +56,8 @@ type MarriageAnalysisRow = {
   houseNumber: 3 | 7 | 11;
   rasi: number;
   occupants: string[];
-  lordId: number;
+  conjuncts: string[];
   lordName: string;
-  aspectors: string[];
-};
-
-type PlanetInfluenceRow = {
-  planetId: number;
-  label: string;
-  houseNumber: number;
-  rasi: number;
-  notes: string[];
-};
-
-type MarriageTimingRow = AntaraRow & {
-  houseOrder: [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11];
-  permutationLabel: string;
-};
-
-type MarriagePermutationStatusRow = {
-  permutationLabel: string;
-  houseOrder: [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11];
-  status: "occurred" | "upcoming" | "absent";
-  firstMatch: MarriageTimingRow | null;
 };
 
 type FamilyFormState = {
@@ -147,75 +126,12 @@ function positionsToPlanetsByRasi(
   return grouped;
 }
 
-function houseFromRasi(ascendantRasi: number, rasi: number) {
-  return ((rasi - ascendantRasi + 12) % 12) + 1;
-}
-
 function rasiForHouse(ascendantRasi: number, houseNumber: number) {
   return (ascendantRasi + houseNumber - 1) % 12;
 }
 
-function grahaDrishtiTargets(planetId: number, houseNumber: number): number[] {
-  const offsets = new Set<number>([7]);
-  if (planetId === 2) {
-    offsets.add(4);
-    offsets.add(8);
-  }
-  if (planetId === 4) {
-    offsets.add(5);
-    offsets.add(9);
-  }
-  if (planetId === 6) {
-    offsets.add(3);
-    offsets.add(10);
-  }
-  return Array.from(offsets).map(
-    (offset) => ((houseNumber + offset - 2) % 12) + 1
-  );
-}
-
-function sameLordSequence(
-  targetLordIds: [number, number, number],
-  row: AntaraRow
-): [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11] | null {
-  const houseToLord = {
-    3: targetLordIds[0],
-    7: targetLordIds[1],
-    11: targetLordIds[2],
-  } as const;
-  const permutations: Array<[3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11]> = [
-    [3, 7, 11],
-    [3, 11, 7],
-    [7, 3, 11],
-    [7, 11, 3],
-    [11, 3, 7],
-    [11, 7, 3],
-  ];
-
-  for (const permutation of permutations) {
-    const [mahaHouse, bhuktiHouse, antaraHouse] = permutation;
-    if (
-      row.maha === houseToLord[mahaHouse] &&
-      row.bhukti === houseToLord[bhuktiHouse] &&
-      row.lord === houseToLord[antaraHouse]
-    ) {
-      return permutation;
-    }
-  }
-  return null;
-}
-
 function formatPlanetList(values: string[], noneLabel: string) {
   return values.length ? values.join(", ") : noneLabel;
-}
-
-function permutationStatusLabel(
-  status: "occurred" | "upcoming" | "absent",
-  t: (key: string) => string
-) {
-  if (status === "occurred") return t("home.statusOccurred");
-  if (status === "upcoming") return t("home.statusUpcoming");
-  return t("home.statusNotYet");
 }
 
 function marriageVerdictLabel(
@@ -225,18 +141,6 @@ function marriageVerdictLabel(
   if (verdict === "strong") return t("home.verdictStrong");
   if (verdict === "supportive") return t("home.verdictSupportive");
   return t("home.verdictWeak");
-}
-
-function permutationLabelForRow(lang: LanguageCode, row: AntaraRow) {
-  return `${lordName(lang, row.maha)} / ${lordName(lang, row.bhukti)} / ${lordName(lang, row.lord)}`;
-}
-
-function buildPermutationLabelFromLords(
-  lang: LanguageCode,
-  houseOrder: [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11],
-  houseToLord: Record<3 | 7 | 11, number>
-) {
-  return houseOrder.map((house) => lordName(lang, houseToLord[house])).join(" / ");
 }
 
 function parseDatePart(value: string) {
@@ -367,174 +271,22 @@ export default function Home() {
   const marriageDerived = useMemo(() => {
     if (!data) return null;
 
-    const gt = (path: string) => getMessage(language, path);
-    const interp = (path: string, vars: Record<string, string | number>) =>
-      interpolate(gt(path), vars);
+    const planetLabel = (planet: { planetEn: string; planetTa: string }) =>
+      language === "ta" ? planet.planetTa : planet.planetEn;
 
-    const ascendant = data.birth.ascendantRasi;
-    const targetHouses: [3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11] = [3, 7, 11];
-
-    const analysisRows: MarriageAnalysisRow[] = targetHouses.map((houseNumber) => {
-      const rasi = rasiForHouse(ascendant, houseNumber);
-      const lordId = SIGN_LORD[rasi];
-      const occupants = data.natalPlanets
-        .filter((planet) => houseFromRasi(ascendant, planet.rasi) === houseNumber)
-        .map((planet) =>
-          language === "ta" ? planet.planetTa : planet.planetEn
-        );
-      const aspectors = data.natalPlanets
-        .filter((planet) =>
-          grahaDrishtiTargets(
-            planet.planetId,
-            houseFromRasi(ascendant, planet.rasi)
-          ).includes(houseNumber)
-        )
-        .map((planet) =>
-          language === "ta" ? planet.planetTa : planet.planetEn
-        );
-      return {
-        houseNumber,
-        rasi,
-        occupants,
-        lordId,
-        lordName: lordName(language, lordId),
-        aspectors,
-      };
-    });
-
-    const targetLordIds = analysisRows.map(
-      (row) => row.lordId
-    ) as [number, number, number];
-    const houseToLord = {
-      3: targetLordIds[0],
-      7: targetLordIds[1],
-      11: targetLordIds[2],
-    } as Record<3 | 7 | 11, number>;
-
-    const targetLordPlanetRows = data.natalPlanets.filter((planet) =>
-      targetLordIds.includes(planet.planetId)
-    );
-
-    const guruSukraRows: PlanetInfluenceRow[] = [4, 5]
-      .map((planetId) => {
-        const row = data.natalPlanets.find((planet) => planet.planetId === planetId);
-        if (!row) return null;
-        const houseNumber = houseFromRasi(ascendant, row.rasi);
-        const notes: string[] = [];
-        if (targetHouses.includes(houseNumber as 3 | 7 | 11)) {
-          notes.push(
-            interp("home.marriageNotePlacement", {
-              house: houseOrdinal(language, houseNumber),
-            })
-          );
-        }
-        const aspected = targetHouses.filter((houseNumberItem) =>
-          grahaDrishtiTargets(planetId, houseNumber).includes(houseNumberItem)
-        );
-        if (aspected.length) {
-          notes.push(
-            interp("home.marriageNoteAspect", {
-              houses: aspected
-                .map((item) => houseOrdinal(language, item))
-                .join(language === "en" ? ", " : ", "),
-            })
-          );
-        }
-        const lordOf = analysisRows
-          .filter((analysis) => analysis.lordId === planetId)
-          .map((analysis) => houseOrdinal(language, analysis.houseNumber));
-        if (lordOf.length) {
-          notes.push(
-            interp("home.marriageNoteLord", {
-              houses: lordOf.join(language === "en" ? ", " : ", "),
-            })
-          );
-        }
-        const conjunctTargetLords = targetLordPlanetRows
-          .filter(
-            (planet) =>
-              planet.planetId !== planetId && planet.rasi === row.rasi
-          )
-          .map((planet) =>
-            language === "ta" ? planet.planetTa : planet.planetEn
-          );
-        if (conjunctTargetLords.length) {
-          notes.push(
-            interp("home.marriageNoteConjunct", {
-              planets: conjunctTargetLords.join(", "),
-            })
-          );
-        }
-        if (!notes.length) {
-          notes.push(gt("home.marriageNoteNoDirect"));
-        }
-        return {
-          planetId,
-          label: language === "ta" ? row.planetTa : row.planetEn,
-          houseNumber,
-          rasi: row.rasi,
-          notes,
-        };
-      })
-      .filter((row): row is PlanetInfluenceRow => row !== null);
-
-    const timingRows: MarriageTimingRow[] = data.vimsottari.antara
-      .map((row) => {
-        const houseOrder = sameLordSequence(targetLordIds, row);
-        if (!houseOrder) return null;
-        return {
-          ...row,
-          houseOrder,
-          permutationLabel: permutationLabelForRow(language, row),
-        };
-      })
-      .filter((row): row is MarriageTimingRow => row !== null)
-      .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }));
-
-    const allPermutationOrders: Array<[3 | 7 | 11, 3 | 7 | 11, 3 | 7 | 11]> = [
-      [3, 7, 11],
-      [3, 11, 7],
-      [7, 3, 11],
-      [7, 11, 3],
-      [11, 3, 7],
-      [11, 7, 3],
-    ];
-
-    const permutationStatusRows: MarriagePermutationStatusRow[] =
-      allPermutationOrders.map((houseOrder) => {
-        const permutationLabel = buildPermutationLabelFromLords(
-          language,
-          houseOrder,
-          houseToLord
-        );
-        const firstMatch =
-          timingRows.find(
-            (row) =>
-              row.houseOrder[0] === houseOrder[0] &&
-              row.houseOrder[1] === houseOrder[1] &&
-              row.houseOrder[2] === houseOrder[2]
-          ) ?? null;
-        let status: MarriagePermutationStatusRow["status"] = "absent";
-        if (firstMatch) {
-          status =
-            firstMatch.start.slice(0, 10) <= todayIso ? "occurred" : "upcoming";
-        }
-        return {
-          permutationLabel,
-          houseOrder,
-          status,
-          firstMatch,
-        };
-      });
-
-    const prediction = buildMarriagePrediction(data, language, todayIso);
+    const analysisRows: MarriageAnalysisRow[] = collectMarriageBhavaReadings(
+      data
+    ).map((reading) => ({
+      houseNumber: reading.houseNumber,
+      rasi: reading.signRasi,
+      occupants: reading.occupants.map(planetLabel),
+      conjuncts: reading.conjuncts.map(planetLabel),
+      lordName: lordName(language, SIGN_LORD[reading.signRasi]),
+    }));
 
     return {
       analysisRows,
-      guruSukraRows,
-      timingRows,
-      permutationStatusRows,
-      prediction,
+      prediction: buildMarriagePrediction(data, language, todayIso),
     };
   }, [data, todayIso, language]);
 
@@ -682,7 +434,7 @@ export default function Home() {
     ].filter((row): row is NonNullable<typeof row> => row !== null);
     const uniqueDates = Array.from(
       new Set(snapshotRows.map((row) => row.start.slice(0, 10)))
-    ).slice(0, 10);
+    ).slice(0, 6);
     if (!uniqueDates.length) {
       setMarriageSnapshots([]);
       return;
@@ -1289,19 +1041,11 @@ export default function Home() {
                 ) : null}
               </div>
             </div>
-            <ul className={styles.kocharRuleList}>
-              <li>{t("home.kocharRuleGuru")}</li>
-              <li>{t("home.kocharRuleShukra")}</li>
-              <li>{t("home.kocharRuleSeventh")}</li>
-              <li>{t("home.kocharRuleNatal")}</li>
-              <li>{t("home.kocharRuleCombo")}</li>
-              <li>{t("home.kocharRuleShani")}</li>
-            </ul>
             {marriageDerived.prediction.marriageKochar.hits.length ? (
               <p className={styles.inlineMeta}>
                 {marriageDerived.prediction.marriageKochar.hits
                   .filter((hit) => hit.weight > 0)
-                  .slice(0, 6)
+                  .slice(0, 4)
                   .map((hit) => hit.note)
                   .join(" · ")}
               </p>
@@ -1355,9 +1099,9 @@ export default function Home() {
                   <tr>
                     <th>{t("home.thHouse")}</th>
                     <th>{t("home.thSign")}</th>
-                    <th>{t("home.thOccupants")}</th>
+                    <th>{t("home.thBhavaOccupants")}</th>
+                    <th>{t("home.thConjuncts")}</th>
                     <th>{t("home.thLord")}</th>
-                    <th>{t("home.thAspectors")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1368,76 +1112,10 @@ export default function Home() {
                       <td>
                         {formatPlanetList(row.occupants, t("home.noneList"))}
                       </td>
+                      <td>
+                        {formatPlanetList(row.conjuncts, t("home.noneList"))}
+                      </td>
                       <td>{row.lordName}</td>
-                      <td>
-                        {formatPlanetList(row.aspectors, t("home.noneList"))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className={styles.sectionHeader} style={{ marginTop: "1.25rem" }}>
-              <h2>{t("home.guruShukraTitle")}</h2>
-              <p>{t("home.guruShukraDesc")}</p>
-            </div>
-
-            <div className={styles.tableWrapCustom}>
-              <table className={styles.analysisTable}>
-                <thead>
-                  <tr>
-                    <th>{t("home.thPlanet")}</th>
-                    <th>{t("home.thSign")}</th>
-                    <th>{t("home.thHouse")}</th>
-                    <th>{t("home.thNotes")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {marriageDerived.guruSukraRows.map((row) => (
-                    <tr key={row.planetId}>
-                      <td>{row.label}</td>
-                      <td>{rasiName(language, row.rasi)}</td>
-                      <td>{houseOrdinal(language, row.houseNumber)}</td>
-                      <td>{row.notes.join(" · ")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className={styles.trackerSection}>
-            <div className={styles.sectionHeader}>
-              <h2>{t("home.permutationStatusTitle")}</h2>
-              <p>{t("home.permutationStatusDesc")}</p>
-            </div>
-
-            <div className={styles.tableWrapCustom}>
-              <table className={styles.analysisTable}>
-                <thead>
-                  <tr>
-                    <th>{t("home.thPermutation")}</th>
-                    <th>{t("home.thHouseOrder")}</th>
-                    <th>{t("home.thStatus")}</th>
-                    <th>{t("home.thStart")}</th>
-                    <th>{t("home.thEnd")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {marriageDerived.permutationStatusRows.map((row) => (
-                    <tr key={row.permutationLabel}>
-                      <td>{row.permutationLabel}</td>
-                      <td>
-                        {row.houseOrder
-                          .map((houseNumber) => houseOrdinal(language, houseNumber))
-                          .join(" → ")}
-                      </td>
-                      <td>
-                        {permutationStatusLabel(row.status, t)}
-                      </td>
-                      <td>{row.firstMatch ? row.firstMatch.start : "—"}</td>
-                      <td>{row.firstMatch?.end ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1519,54 +1197,6 @@ export default function Home() {
                   ) : (
                     <tr>
                       <td colSpan={9}>{t("home.noSuchPeriods")}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className={styles.trackerSection}>
-            <div className={styles.sectionHeader}>
-              <h2>{t("home.strictPermutationTitle")}</h2>
-              <p>{t("home.strictPermutationDesc")}</p>
-            </div>
-
-            <div className={styles.tableWrapCustom}>
-              <table className={styles.analysisTable}>
-                <thead>
-                  <tr>
-                    <th>{t("home.thPermutation")}</th>
-                    <th>{t("home.mahadasha")}</th>
-                    <th>{t("home.bhukti")}</th>
-                    <th>{t("home.antara")}</th>
-                    <th>{t("home.thHouseOrder")}</th>
-                    <th>{t("home.thStart")}</th>
-                    <th>{t("home.thEnd")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {marriageDerived.timingRows.length ? (
-                    marriageDerived.timingRows.map((row, index) => (
-                      <tr key={`${row.start}-${index}`}>
-                        <td>{row.permutationLabel}</td>
-                        <td>{lordName(language, row.maha)}</td>
-                        <td>{lordName(language, row.bhukti)}</td>
-                        <td>{lordName(language, row.lord)}</td>
-                        <td>
-                          {row.houseOrder
-                            .map((houseNumber) =>
-                              houseOrdinal(language, houseNumber)
-                            )
-                            .join(" → ")}
-                        </td>
-                        <td>{row.start}</td>
-                        <td>{row.end ?? "—"}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={7}>{t("home.noSuchPeriods")}</td>
                     </tr>
                   )}
                 </tbody>

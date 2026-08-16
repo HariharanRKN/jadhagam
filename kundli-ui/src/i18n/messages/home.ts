@@ -46,7 +46,7 @@ export const home = {
     rangeFromTo: "From {start} to {end}",
     marriageBirthTitle: "Birth chart review",
     marriageBirthDesc:
-      "Planets, aspects, and lords for houses 3, 7, and 11.",
+      "Equal-bhava occupants of houses 3, 7, and 11 (8° fringe) plus planets conjunct those occupants within 8°.",
     marriageAssessmentTitle: "Marriage assessment",
     marriageAssessmentDesc:
       "Foundation from houses 3, 7, and 11 plus 7th lord, Venus, and Jupiter. Activation uses the current dasha stack and whether transit Jupiter aspects house 7 or 11.",
@@ -80,6 +80,8 @@ export const home = {
     thHouse: "House",
     thSign: "Sign",
     thOccupants: "Planets in house",
+    thBhavaOccupants: "Bhava occupants",
+    thConjuncts: "8° conjunctions",
     thLord: "Lord",
     thAspectors: "Aspecting planets",
     noneList: "None",
@@ -100,14 +102,14 @@ export const home = {
     statusNotYet: "Not in this dasha list",
     dashaPeriodsTitle: "Marriage activation windows",
     dashaPeriodsDesc:
-      "Antara periods where the 3rd, 7th, or 11th lord, Venus, or Jupiter is active. Transit karakas (Guru, Shukra, 7th lord) are added to each window when a kochar snapshot is available.",
+      "Antara periods where marriage lords, Venus, Jupiter, or 3/7/11 bhava occupants and 8° conjuncts are running. Strong past windows are kept; kochar is added when a snapshot exists.",
     strictPermutationTitle: "Exact 3–7–11 lord permutations",
     strictPermutationDesc:
       "Rarer windows where the 3rd, 7th, and 11th lords occupy mahadasha, bhukti, and antara together, in any order. Includes past and future.",
     noSuchPeriods: "No such periods in this chart’s dasha list.",
     snapshotChartsTitle: "Period-start charts",
     snapshotChartsDesc:
-      "Transit chart for the start of the current period and nearby activation windows (up to 10).",
+      "Transit chart for the current period and nearby activation windows (up to 6).",
     loadingCharts: "Loading charts…",
     noChartsToShow: "No charts to show.",
     familyInputsTitle: "Family inputs",
@@ -199,7 +201,8 @@ export const home = {
     matchesSummary: "1960-01-01 முதல் {end} வரை {count} தின பொருத்தங்கள் கிடைத்துள்ளன.",
     rangeFromTo: "{start} முதல் {end}",
     marriageBirthTitle: "பிறப்பு ஜாதக ஆய்வு",
-    marriageBirthDesc: "3, 7, 11 பாவங்களில் உள்ள கிரகங்கள், பார்வைகள் மற்றும் அதிபதிகள்.",
+    marriageBirthDesc:
+      "3, 7, 11 பாவங்களின் சம பாவ நிலைகள் (8° விளிம்பு) மற்றும் அந்த நிலைகளுடன் 8° இணைவுள்ள கிரகங்கள்.",
     marriageAssessmentTitle: "திருமண மதிப்பீடு",
     marriageAssessmentDesc:
       "3, 7, 11 பாவங்கள் மற்றும் 7ஆம் அதிபதி, சுக்கிரன், குரு ஆகியவற்றின் அடித்தளம். செயல்பாடு தற்போதைய தசை அடுக்கையும், கோசார குரு 7 அல்லது 11 பாவத்தைப் பார்க்கிறாரா என்பதையும் பயன்படுத்துகிறது.",
@@ -233,6 +236,8 @@ export const home = {
     thHouse: "பாவம்",
     thSign: "ராசி",
     thOccupants: "அந்த பாவத்தில் உள்ள கிரகங்கள்",
+    thBhavaOccupants: "பாவ நிலைகள்",
+    thConjuncts: "8° இணைவுகள்",
     thLord: "அதிபதி",
     thAspectors: "பார்க்கும் கிரகங்கள்",
     noneList: "இல்லை",
@@ -253,14 +258,14 @@ export const home = {
     statusNotYet: "இந்த தசைப் பட்டியலில் இல்லை",
     dashaPeriodsTitle: "திருமணச் செயல்பாட்டு காலங்கள்",
     dashaPeriodsDesc:
-      "3, 7, 11 அதிபதி, சுக்கிரன் அல்லது குரு தசை-புக்தி-அந்தரத்தில் இருக்கும் காலங்கள். கோசார கரகர்கள் (குரு, சுக்கிரன், 7ஆம் அதிபதி) கிடைக்கும்போது ஒவ்வொரு சாளரத்திலும் சேர்க்கப்படும்.",
+      "திருமண அதிபதிகள், சுக்கிரன், குரு அல்லது 3/7/11 பாவ நிலைகள் மற்றும் 8° இணைவுகள் இயங்கும் அந்தர காலங்கள். வலுவான கடந்த சாளரங்கள் வைக்கப்படும்; கோசாரம் கிடைக்கும்போது சேர்க்கப்படும்.",
     strictPermutationTitle: "சரியான 3–7–11 அதிபதி permutation",
     strictPermutationDesc:
       "3, 7, 11 பாவ அதிபதிகள் மூன்றும் தசை, புக்தி, அந்தரம் வரிசையில் மாற்றி மாற்றி வரும் அரிதான காலங்கள். கடந்ததும் எதிர்காலமும் சேர்க்கப்படும்.",
     noSuchPeriods: "இத்தகைய காலங்கள் இந்த ஜாதகத் தசையில் இல்லை.",
     snapshotChartsTitle: "கால தொடக்க ஜாதகங்கள்",
     snapshotChartsDesc:
-      "தற்போதைய காலம் மற்றும் அருகிலுள்ள செயல்பாட்டு சாளரங்களின் முதல் நாளுக்கான கோசார ஜாதகம். அதிகபட்சம் 10 மட்டும்.",
+      "தற்போதைய காலம் மற்றும் அருகிலுள்ள செயல்பாட்டு சாளரங்களின் முதல் நாளுக்கான கோசார ஜாதகம். அதிகபட்சம் 6 மட்டும்.",
     loadingCharts: "ஜாதகங்கள் ஏற்றப்படுகிறது…",
     noChartsToShow: "காட்ட ஜாதகம் எதுவும் இல்லை.",
     familyInputsTitle: "குடும்ப உள்ளீடுகள்",

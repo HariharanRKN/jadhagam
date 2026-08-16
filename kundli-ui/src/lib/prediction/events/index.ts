@@ -3,6 +3,7 @@ export {
   applyKocharToMarriageRow,
   evaluateMarriageKochar,
 } from "./marriageKochar";
+export { collectMarriageBhavaReadings } from "./marriageBhava";
 export type {
   MarriagePrediction,
   MarriageSequenceRow,
