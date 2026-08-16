@@ -102,7 +102,7 @@ export const home = {
     statusNotYet: "Not in this dasha list",
     dashaPeriodsTitle: "Marriage activation windows",
     dashaPeriodsDesc:
-      "Dasha/bhukti periods from age 22 through 40 where the running lords intersect houses 3, 7, or 11. Score is 70% dasha and 30% Guru-first Venus kochar from the Moon. Bhuktis longer than 6 months are sampled every 6 months; only the strongest Kochar window is shown, or every window within 5 points of the top score.",
+      "Dasha/bhukti periods from age 22 through 40 where the running lords intersect houses 3, 7, or 11. Score is 70% dasha and 30% Guru-first Venus kochar from the Moon. Bhuktis longer than 6 months are sampled every 6 months; only the strongest Kochar window is shown, or every window within 5 points of the top score. Rows are listed highest score first.",
     strictPermutationTitle: "Exact 3–7–11 lord permutations",
     strictPermutationDesc:
       "Rarer windows where the 3rd, 7th, and 11th lords occupy mahadasha, bhukti, and antara together, in any order. Includes past and future.",
@@ -279,7 +279,7 @@ export const home = {
     statusNotYet: "இந்த தசைப் பட்டியலில் இல்லை",
     dashaPeriodsTitle: "திருமணச் செயல்பாட்டு காலங்கள்",
     dashaPeriodsDesc:
-      "22 முதல் 40 வயது வரை 3, 7 அல்லது 11 பாவங்களுடன் இணையும் தசை/புக்தி காலங்கள். மதிப்பெண் 70% தசையும் 30% சந்திரனிலிருந்து குரு-முதன்மை சுக்கிர கோசாரமும். 6 மாதத்திற்கு மேல் உள்ள புக்திகள் 6 மாத இடைவெளியில் மாதிரி எடுக்கப்படும்; உயர்ந்த கோசார சாளரம் மட்டும் காட்டப்படும், அல்லது உச்சத்திலிருந்து 5 புள்ளிக்குள் உள்ள சாளரங்கள்.",
+      "22 முதல் 40 வயது வரை 3, 7 அல்லது 11 பாவங்களுடன் இணையும் தசை/புக்தி காலங்கள். மதிப்பெண் 70% தசையும் 30% சந்திரனிலிருந்து குரு-முதன்மை சுக்கிர கோசாரமும். 6 மாதத்திற்கு மேல் உள்ள புக்திகள் 6 மாத இடைவெளியில் மாதிரி எடுக்கப்படும்; உயர்ந்த கோசார சாளரம் மட்டும் காட்டப்படும், அல்லது உச்சத்திலிருந்து 5 புள்ளிக்குள் உள்ள சாளரங்கள். வரிசை உயர்ந்த மதிப்பெண் முதல்.",
     strictPermutationTitle: "சரியான 3–7–11 அதிபதி permutation",
     strictPermutationDesc:
       "3, 7, 11 பாவ அதிபதிகள் மூன்றும் தசை, புக்தி, அந்தரம் வரிசையில் மாற்றி மாற்றி வரும் அரிதான காலங்கள். கடந்ததும் எதிர்காலமும் சேர்க்கப்படும்.",

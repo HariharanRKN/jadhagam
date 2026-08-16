@@ -159,6 +159,17 @@ function kocharRank(slice: MarriageBhuktiWindow): number {
   return slice.kocharScore ?? -1;
 }
 
+export function sortMarriageWindowsByScore(
+  windows: MarriageBhuktiWindow[]
+): MarriageBhuktiWindow[] {
+  return [...windows].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const kocharDelta = (b.kocharScore ?? -1) - (a.kocharScore ?? -1);
+    if (kocharDelta) return kocharDelta;
+    return isoDateKey(a.start).localeCompare(isoDateKey(b.start), "en", { numeric: true });
+  });
+}
+
 export function narrowSlicesByKochar(
   original: MarriageBhuktiWindow,
   scoredSlices: MarriageBhuktiWindow[]
@@ -409,15 +420,17 @@ export function overlayMoonKocharOnWindows(
   snapshotsByDate: Map<string, TransitRasiPlanet[]>,
   lang: MarriageLang = "en"
 ): MarriageBhuktiWindow[] {
-  return windows.flatMap((row) => {
-    const { base, scoredSlices } = scoreMoonKocharSlices(
-      row,
-      natalPlanets,
-      snapshotsByDate,
-      lang
-    );
-    return narrowSlicesByKochar(base, scoredSlices);
-  });
+  return sortMarriageWindowsByScore(
+    windows.flatMap((row) => {
+      const { base, scoredSlices } = scoreMoonKocharSlices(
+        row,
+        natalPlanets,
+        snapshotsByDate,
+        lang
+      );
+      return narrowSlicesByKochar(base, scoredSlices);
+    })
+  );
 }
 
 export function currentBhuktiWindow(

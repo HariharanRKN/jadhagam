@@ -19,6 +19,7 @@ import {
   currentBhuktiWindow,
   listMarriageBhuktiWindows,
   overlayMoonKocharOnWindows,
+  sortMarriageWindowsByScore,
 } from "@/lib/prediction/events";
 import type { MarriageBhuktiWindow, MarriagePrediction } from "@/lib/prediction/events";
 import { isoDateKey } from "@/lib/isoDate";
@@ -345,7 +346,7 @@ export default function Home() {
 
   const overlayedMarriageWindows = useMemo((): MarriageBhuktiWindow[] => {
     if (marriageServerPrediction) {
-      return marriageServerPrediction.periodSequence.windows;
+      return sortMarriageWindowsByScore(marriageServerPrediction.periodSequence.windows);
     }
     if (!data || !marriageDerived) return [];
     const snapshotsByDate = new Map(

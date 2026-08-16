@@ -13,6 +13,7 @@ export {
   overlayMoonKocharOnWindows,
   scoreMoonKocharSlices,
   selectNearTopByScore,
+  sortMarriageWindowsByScore,
   MARRIAGE_ADULT_AGE_YEARS,
   MARRIAGE_MAX_AGE_YEARS,
   KOCHAR_NEAR_TOP_POINTS,

@@ -5,6 +5,7 @@ import {
   listSixMonthSlices,
   narrowSlicesByKochar,
   selectNearTopByScore,
+  sortMarriageWindowsByScore,
   type MarriageBhuktiWindow,
 } from "../src/lib/prediction/events/marriageBhuktiWindows.ts";
 
@@ -163,5 +164,17 @@ const current = currentBhuktiWindow(
 if (!current || current.start !== "2020-07-01") {
   fail("current period stays on the running bhukti even when the peak slice is later");
 }
+
+const ranked = sortMarriageWindowsByScore([
+  windowStub({ start: "1981-02-27", end: "1985-06-19", score: 40, kocharScore: 0 }),
+  windowStub({ start: "1986-01-01", end: "1986-07-01", score: 79, kocharScore: 80 }),
+  windowStub({ start: "1982-08-27", end: "1983-02-27", score: 79, kocharScore: 100 }),
+  windowStub({ start: "1990-01-01", end: "1990-07-01", score: 52, kocharScore: 16 }),
+]);
+assertEqual(
+  ranked.map((row) => row.start),
+  ["1982-08-27", "1986-01-01", "1990-01-01", "1981-02-27"],
+  "marriage windows are listed high score to low"
+);
 
 console.log("ok: marriage kochar 6-month slice selection");
