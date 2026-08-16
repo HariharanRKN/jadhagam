@@ -14,6 +14,8 @@ import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
 import {
   buildMarriagePrediction,
   collectMarriageBhavaReadings,
+  collectMarriageKocharSampleDates,
+  currentBhuktiWindow,
   listMarriageBhuktiWindows,
   overlayMoonKocharOnWindows,
 } from "@/lib/prediction/events";
@@ -338,7 +340,7 @@ export default function Home() {
   }, [data, language, marriageDerived, marriageServerPrediction, marriageSnapshots]);
 
   const currentMarriageBhukti = useMemo(() => {
-    return latestStartedRow(overlayedMarriageWindows, todayIso);
+    return currentBhuktiWindow(overlayedMarriageWindows, todayIso);
   }, [overlayedMarriageWindows, todayIso]);
 
   useEffect(() => {
@@ -472,9 +474,7 @@ export default function Home() {
         if (cancelled) return;
         setMarriageServerPrediction(null);
         const windows = listMarriageBhuktiWindows(chart, language);
-        const uniqueDates = Array.from(
-          new Set(windows.map((row) => isoDateKey(row.start)).filter(Boolean))
-        );
+        const uniqueDates = collectMarriageKocharSampleDates(windows);
         const snapshots = (
           await mapPool(uniqueDates, 6, async (dateOnly) => {
             try {
@@ -1081,7 +1081,11 @@ export default function Home() {
                 <strong>{t("home.currentPeriodHeading")}:</strong>{" "}
                 {lordName(language, currentMarriageBhukti.maha)} /{" "}
                 {lordName(language, currentMarriageBhukti.bhukti)} ·{" "}
-                {t("home.scoreLabel")} {currentMarriageBhukti.score} ·{" "}
+                {isoDateKey(currentMarriageBhukti.start)}
+                {currentMarriageBhukti.end
+                  ? ` – ${isoDateKey(currentMarriageBhukti.end)}`
+                  : ""}{" "}
+                · {t("home.scoreLabel")} {currentMarriageBhukti.score} ·{" "}
                 {marriageVerdictLabel(currentMarriageBhukti.verdict, t)}
                 {currentMarriageBhukti.matchedRoles.length
                   ? ` · ${formatMatchedRoles(

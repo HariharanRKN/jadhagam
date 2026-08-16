@@ -1,4 +1,8 @@
-import { buildMarriagePrediction, listMarriageBhuktiWindows } from "@/lib/prediction/events";
+import {
+  buildMarriagePrediction,
+  collectMarriageKocharSampleDates,
+  listMarriageBhuktiWindows,
+} from "@/lib/prediction/events";
 import {
   historySnapshotsList,
   loadPositionSnapshots,
@@ -46,7 +50,7 @@ export async function POST(request: Request) {
   }
 
   const windows = listMarriageBhuktiWindows(chart, language);
-  const dates = Array.from(new Set(windows.map((row) => isoDateKey(row.start)).filter(Boolean)));
+  const dates = collectMarriageKocharSampleDates(windows);
   const snapshotsByDate = await loadPositionSnapshots(dates);
   const transitsByDate = new Map(
     [...snapshotsByDate.entries()].map(([date, snapshot]) => [
@@ -58,8 +62,11 @@ export async function POST(request: Request) {
     ])
   );
   const prediction = buildMarriagePrediction(chart, language, undefined, transitsByDate);
+  const displayedDates = prediction.periodSequence.windows.map((row) =>
+    isoDateKey(row.start)
+  );
   return Response.json({
     ...prediction,
-    startDateSnapshots: historySnapshotsList(snapshotsByDate, dates),
+    startDateSnapshots: historySnapshotsList(snapshotsByDate, displayedDates),
   });
 }

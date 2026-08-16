@@ -373,6 +373,11 @@ export default function MarriageTwoPage() {
                       {lordName(language, prediction.periodSequence.current.maha)} •{" "}
                       {t("marriage2.bhuktiLabel")}{" "}
                       {lordName(language, prediction.periodSequence.current.bhukti)}
+                      {" · "}
+                      {prediction.periodSequence.current.start.slice(0, 10)}
+                      {prediction.periodSequence.current.end
+                        ? ` – ${prediction.periodSequence.current.end.slice(0, 10)}`
+                        : ""}
                     </p>
                     <p>
                       {t("marriage2.scoreLabel")}{" "}
@@ -397,11 +402,13 @@ export default function MarriageTwoPage() {
                 <div className={styles.sequenceList}>
                   {prediction.periodSequence.windows.map((row) => (
                     <div
-                      key={`${row.start}-${row.maha}-${row.bhukti}`}
+                      key={`${row.start}-${row.end}-${row.maha}-${row.bhukti}`}
                       className={styles.sequenceCard}
                     >
                       <strong>
-                        {row.start.slice(0, 10)} • {lordName(language, row.maha)}/
+                        {row.start.slice(0, 10)}
+                        {row.end ? ` – ${row.end.slice(0, 10)}` : ""} •{" "}
+                        {lordName(language, row.maha)}/
                         {lordName(language, row.bhukti)} •{" "}
                         {verdictLabel(row.verdict, t)}
                       </strong>
