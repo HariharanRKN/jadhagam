@@ -130,7 +130,7 @@ export function SavedKundaliList({ dark, refreshKey, onLoad }: Props) {
               <div className={styles.savedItemActions}>
                 <button
                   type="button"
-                  className={styles.savedActionBtn}
+                  className={styles.savedLoadBtn}
                   disabled={busyId === item.id}
                   onClick={() => onLoad(item)}
                 >

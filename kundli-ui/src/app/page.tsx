@@ -874,11 +874,13 @@ export default function Home() {
         key={seedNonce}
         dark={dark}
         seed={formSeed}
+        savedRefreshKey={savedRefreshKey}
         onSuccess={(payload) => {
           setData(payload);
           setApiError(null);
         }}
         onSaved={() => setSavedRefreshKey((n) => n + 1)}
+        onLoadSaved={(item) => void loadSavedKundali(item)}
         onError={(msg) => setApiError(msg || null)}
       />
 
