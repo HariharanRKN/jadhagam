@@ -1,5 +1,7 @@
 .section {
+  width: 100%;
   max-width: 1100px;
+  min-width: 0;
   margin: 2.5rem auto 0;
   padding-top: 1.5rem;
   border-top: 1px solid var(--tbl-border, #e2e8f0);
@@ -21,7 +23,11 @@
 }
 
 .tableWrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: 8px;
   border: 1px solid var(--tbl-border, #e2e8f0);
   background: var(--tbl-bg, #fff);
@@ -67,6 +73,73 @@
 
 .table tbody tr:last-child td {
   border-bottom: none;
+}
+
+@media (max-width: 720px) {
+  .tableWrap {
+    overflow: visible;
+    border: none;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .table,
+  .table thead,
+  .table tbody,
+  .table tr,
+  .table th,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .table tbody tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--tbl-border, #e2e8f0);
+    border-radius: 10px;
+    background: var(--tbl-bg, #fff);
+    padding: 0.35rem 0.15rem;
+  }
+
+  .table tbody tr:last-child td,
+  .table th,
+  .table td {
+    border-bottom: none;
+  }
+
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.45rem 0.75rem;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    flex: 0 0 42%;
+    max-width: 10rem;
+    font-weight: 600;
+    color: var(--tbl-muted, #64748b);
+  }
+
+  .table td.mono {
+    font-size: 0.72rem;
+  }
 }
 
 .mono {
@@ -158,6 +231,15 @@
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.7rem;
   color: var(--tbl-muted, #64748b);
+  word-break: break-word;
+}
+
+@media (max-width: 720px) {
+  .expander summary,
+  .expander .leaf {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .error {
