@@ -960,6 +960,8 @@ export default function Home() {
 
           <PlanetaryTableTamil
             natal={data.natalPlanets}
+            natalLagna={data.natalLagna}
+            birth={data.birth}
             transit={data.transitPlanets}
             labels={data.vimsottari.labelsTa}
             dark={dark}
