@@ -14,6 +14,8 @@ const dbFile = join(dir, "saved_kundalis.sqlite");
 const jsonFile = join(dir, "saved_kundalis.json");
 
 process.env.NODE_ENV = "development";
+delete process.env.KUNDALI_DB_URL;
+delete process.env.KUNDALI_DB_AUTH_TOKEN;
 process.env.KUNDALI_DB_PATH = dbFile;
 process.env.KUNDALI_STORE_PATH = jsonFile;
 

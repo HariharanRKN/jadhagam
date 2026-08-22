@@ -14,7 +14,7 @@ export type KundaliPlace = {
   tz: number;
 };
 
-/** Birth inputs stored in SQLite on the server. The computed chart is not saved; it is rebuilt on load. */
+/** Birth inputs stored in SQLite (Turso in production, local file in development). The computed chart is not saved; it is rebuilt on load. */
 export type SavedKundali = {
   id: string;
   family: boolean;
