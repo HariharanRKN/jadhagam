@@ -86,11 +86,39 @@ VIMSOTTARI_YEARS = {8: 7, 5: 20, 0: 6, 1: 10, 2: 7, 7: 18, 4: 16, 6: 19, 3: 17}
 SIDEREAL_YEAR_DAYS = const.sidereal_year
 
 
+# Lagna is shown in natal tables but is not a graha (planetId -1).
+LAGNA_PLANET_ID = -1
+
+
 def nak_and_pada(total_longitude):
     nak_span = 360.0 / 27.0
     nak_idx = int(total_longitude / nak_span) % 27
     pada = int((total_longitude % nak_span) / (nak_span / 4.0)) + 1
     return NAKSHATRA_NAMES[nak_idx], pada
+
+
+def _position_table_row(pid, planet_en, planet_ta, rasi, deg):
+    tl = total_longitude(rasi, deg)
+    nak_idx = int(tl / (360.0 / 27.0)) % 27
+    _, pada = nak_and_pada(tl)
+    return {
+        "planetId": pid,
+        "planetEn": planet_en,
+        "planetTa": planet_ta,
+        "rasi": rasi,
+        "rasiTa": RASI_TAMIL[rasi],
+        "degInSign": round(float(deg), 4),
+        "totalLongitude": round(tl, 4),
+        "nakshatraEn": NAKSHATRA_NAMES[nak_idx],
+        "nakshatraTa": NAKSHATRA_TAMIL[nak_idx],
+        "pada": pada,
+    }
+
+
+def _lagna_table_row(asc_rasi, asc_deg):
+    return _position_table_row(
+        LAGNA_PLANET_ID, "Lagna", "லக்னம்", asc_rasi, asc_deg
+    )
 
 
 def total_longitude(rasi, deg):
@@ -273,20 +301,13 @@ def _planet_table_rows(planet_positions):
             continue
         rasi = entry[1][0]
         deg = float(entry[1][1])
-        tl = total_longitude(rasi, deg)
-        nak_idx = int(tl / (360.0 / 27.0)) % 27
-        _, pada = nak_and_pada(tl)
-        rows.append({
-            "planetId": pid,
-            "planetEn": PLANET_NAMES[pid],
-            "planetTa": PLANET_TAMIL_FULL.get(pid, ""),
-            "rasi": rasi,
-            "rasiTa": RASI_TAMIL[rasi],
-            "degInSign": round(deg, 4),
-            "totalLongitude": round(tl, 4),
-            "nakshatraTa": NAKSHATRA_TAMIL[nak_idx],
-            "pada": pada,
-        })
+        rows.append(_position_table_row(
+            pid,
+            PLANET_NAMES[pid],
+            PLANET_TAMIL_FULL.get(pid, ""),
+            rasi,
+            deg,
+        ))
     order = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     rows.sort(key=lambda x: order.index(x["planetId"]) if x["planetId"] in order else 99)
     return rows
@@ -448,6 +469,7 @@ def build_ui_payload(
             "ascendantRasi": asc_rasi,
             "computedAt": tr.isoformat(),
         },
+        "natalLagna": _lagna_table_row(asc_rasi, asc_deg),
         "natalPlanets": _planet_table_rows(planet_positions),
         "transitPlanets": _planet_table_rows(transit_positions),
         "vimsottari": {

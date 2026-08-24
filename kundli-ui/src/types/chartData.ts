@@ -6,6 +6,7 @@ export interface PlanetRow {
   rasiTa: string;
   degInSign: number;
   totalLongitude: number;
+  nakshatraEn?: string;
   nakshatraTa: string;
   pada: number;
 }
@@ -78,6 +79,7 @@ export interface ChartDataPayload {
     ascendantRasi: number;
     computedAt?: string;
   };
+  natalLagna?: PlanetRow;
   natalPlanets: PlanetRow[];
   transitPlanets: PlanetRow[];
   vimsottari: {

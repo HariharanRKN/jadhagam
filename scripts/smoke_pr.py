@@ -120,13 +120,30 @@ def run_semantic_engine() -> None:
 
 
 def assert_chart_shape(chart: Any, label: str) -> None:
-    obj = require_keys(chart, ["meta", "birth", "transit", "natalPlanets", "transitPlanets", "vimsottari"], label)
+    obj = require_keys(
+        chart,
+        ["meta", "birth", "transit", "natalLagna", "natalPlanets", "transitPlanets", "vimsottari"],
+        label,
+    )
     birth = require_keys(obj["birth"], ["planetsByRasi", "ascendantRasi"], f"{label}.birth")
     if not isinstance(birth["ascendantRasi"], (int, float)):
         fail(f"{label}.birth.ascendantRasi must be a number")
     natal = obj["natalPlanets"]
     if not isinstance(natal, list) or len(natal) < 9:
         fail(f"{label}.natalPlanets must be a non-empty list of planets")
+    if any(isinstance(row, dict) and row.get("planetId") == -1 for row in natal):
+        fail(f"{label}.natalPlanets must not include Lagna (planetId -1)")
+    lagna = require_keys(
+        obj["natalLagna"],
+        ["planetId", "planetEn", "rasi", "degInSign", "totalLongitude", "nakshatraTa", "pada"],
+        f"{label}.natalLagna",
+    )
+    if lagna.get("planetId") != -1 or lagna.get("planetEn") != "Lagna":
+        fail(f"{label}.natalLagna must be Lagna with planetId -1")
+    if not isinstance(lagna.get("degInSign"), (int, float)):
+        fail(f"{label}.natalLagna.degInSign must be a number")
+    if not isinstance(lagna.get("pada"), int) or not (1 <= lagna["pada"] <= 4):
+        fail(f"{label}.natalLagna.pada must be 1..4")
     vims = require_keys(obj["vimsottari"], ["mahadasha", "bhukti", "antara"], f"{label}.vimsottari")
     if not isinstance(vims["mahadasha"], list) or not vims["mahadasha"]:
         fail(f"{label}.vimsottari.mahadasha must be a non-empty list")
