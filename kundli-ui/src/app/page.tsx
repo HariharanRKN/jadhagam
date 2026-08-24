@@ -9,6 +9,7 @@ import { PlacePhotonField } from "@/components/PlacePhotonField";
 import { PlanetaryTableTamil } from "@/components/tables/PlanetaryTableTamil";
 import { DashaBhuktiTableTamil } from "@/components/tables/DashaBhuktiTableTamil";
 import { VimsottariExpander } from "@/components/tables/VimsottariExpander";
+import { KundaliJsonExport } from "@/components/tables/KundaliJsonExport";
 import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
 import { useTranslations } from "@/i18n/useTranslations";
 import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
@@ -966,6 +967,7 @@ export default function Home() {
             labels={data.vimsottari.labelsTa}
             dark={dark}
           />
+          <KundaliJsonExport chart={data} dark={dark} />
           <DashaBhuktiTableTamil
             rows={data.vimsottari.bhukti}
             labels={data.vimsottari.labelsTa}
@@ -1654,6 +1656,7 @@ export default function Home() {
                         labels={form.result.vimsottari.labelsTa}
                         dark={dark}
                       />
+                      <KundaliJsonExport chart={form.result} dark={dark} compact />
                     </div>
                   ) : (
                     <p className={styles.inlineMeta}>{t("home.computePrompt")}</p>

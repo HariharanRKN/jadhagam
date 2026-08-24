@@ -39,6 +39,8 @@ jobs:
         working-directory: kundli-ui
         run: |
           npm ci
+          node --experimental-strip-types scripts/test-kundali-export.mts
+          node --experimental-strip-types scripts/test-marriage-kochar-slices.mts
           npm run build
 
       # next start is incompatible with output: standalone. Dev mode uses
