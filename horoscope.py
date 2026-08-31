@@ -269,11 +269,107 @@ def export_horoscope_json():
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
+def _dhasa_start_datetime(value) -> datetime:
+    """Parse a PyJHora dasha start: 4.7 date string or 4.8+ (Y, M, D, fractional_hour)."""
+    if isinstance(value, datetime):
+        return value.replace(tzinfo=None) if value.tzinfo else value
+    if isinstance(value, (tuple, list)) and len(value) >= 3 and not isinstance(value[0], str):
+        try:
+            year, month, day = int(value[0]), int(value[1]), int(value[2])
+            if len(value) >= 4 and not isinstance(value[3], str):
+                frac_hours = float(value[3])
+                total_seconds = int(round(max(frac_hours, 0.0) * 3600.0))
+                extra_days, total_seconds = divmod(total_seconds, 24 * 3600)
+                hour, rem = divmod(total_seconds, 3600)
+                minute, second = divmod(rem, 60)
+                return datetime(year, month, day, hour, minute, second) + timedelta(days=extra_days)
+            return datetime(year, month, day)
+        except (TypeError, ValueError, OverflowError):
+            return datetime.min
+    text = str(value).strip()
+    parts = text.split()
+    if len(parts) >= 3 and parts[-1].upper() in ("AM", "PM"):
+        try:
+            return datetime.strptime(parts[0] + " " + parts[1], "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            try:
+                return datetime.strptime(" ".join(parts[:3]), "%Y-%m-%d %I:%M:%S %p")
+            except ValueError:
+                return datetime.min
+    if len(parts) >= 2:
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+            try:
+                return datetime.strptime(parts[0] + " " + parts[1], fmt)
+            except ValueError:
+                continue
+    return datetime.min
+
+
 def _parse_dhasa_dt(s):
-    parts = str(s).split()
-    if len(parts) < 2:
-        return datetime.min
-    return datetime.strptime(parts[0] + ' ' + parts[1], '%Y-%m-%d %H:%M:%S')
+    return _dhasa_start_datetime(s)
+
+
+def _format_dhasa_start(value) -> str:
+    dt = _dhasa_start_datetime(value)
+    if dt == datetime.min:
+        return str(value)
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _is_tuple_dhasa_row(row) -> bool:
+    """PyJHora 4.8+ rows are [lords_tuple, (Y,M,D,fh), duration]."""
+    return (
+        isinstance(row, (list, tuple))
+        and len(row) >= 2
+        and isinstance(row[0], tuple)
+    )
+
+
+def _normalize_dhasa_rows(rows):
+    """Convert 4.7 string rows and 4.8+ tuple rows to [lord, ..., start_str]."""
+    out = []
+    for row in rows:
+        if not row:
+            continue
+        if _is_tuple_dhasa_row(row):
+            lords = [int(x) for x in row[0]]
+            start = _format_dhasa_start(row[1])
+            out.append(lords + [start])
+        else:
+            lords = [int(x) for x in row[:-1]]
+            start = _format_dhasa_start(row[-1])
+            out.append(lords + [start])
+    return out
+
+
+def _vimsottari_fn():
+    from jhora.horoscope.dhasa.graha import vimsottari
+
+    fn = getattr(vimsottari, "get_vimsottari_dhasa_bhukthi", None)
+    if fn is None:
+        fn = getattr(vimsottari, "get_dhasa_bhukthi", None)
+    if fn is None:
+        raise RuntimeError("PyJHora vimsottari API not found")
+    return fn
+
+
+def _vimsottari_raw_rows(jd, place, dhasa_level_index: int):
+    result = _vimsottari_fn()(jd, place, dhasa_level_index=dhasa_level_index)
+    if isinstance(result, tuple) and len(result) >= 2:
+        return result[1] or []
+    return result or []
+
+
+def _vimsottari_rows(jd, place, dhasa_level_index: int):
+    return _normalize_dhasa_rows(_vimsottari_raw_rows(jd, place, dhasa_level_index))
+
+
+def _configure_ayanamsa():
+    setter = getattr(drik, "set_ayanamsa_mode", None)
+    if callable(setter):
+        setter("LAHIRI")
+    if hasattr(const, "use_rahu_ketu_as_true_nodes"):
+        const.use_rahu_ketu_as_true_nodes = False
 
 
 def _end_grouped(rows, key_len, dt_idx):
@@ -301,6 +397,7 @@ def _planet_table_rows(planet_positions):
             continue
         rasi = entry[1][0]
         deg = float(entry[1][1])
+        rasi = int(rasi) % 12
         rows.append(_position_table_row(
             pid,
             PLANET_NAMES[pid],
@@ -374,18 +471,16 @@ def build_ui_payload(
 ):
     """
     Full UI bundle: chart props, Tamil planetary tables, Vimsottari with start/end per level.
-    Vimśottari depths: PyJHora uses 2=bhukti, 3=pratyantara, 5=śookṣma (depth 4 duplicates 3).
+    Vimśottari depths: 1=maha, 2=bhukti, 3=pratyantara; sookshma is 4 on PyJHora 4.8+
+    and 5 on 4.7 (that version's level 4 duplicates pratyantara).
     `place` is drik.Place(...). `birth_dt` is naive wall-clock at birth place.
     """
-    from jhora.horoscope.dhasa.graha import vimsottari
-
-    drik.set_ayanamsa_mode('LAHIRI')
-    const.use_rahu_ketu_as_true_nodes = False
+    _configure_ayanamsa()
 
     jd = _birth_wall_clock_julday(birth_dt)
 
     asc_data = drik.ascendant(jd, place)
-    asc_rasi = asc_data[0]
+    asc_rasi = int(asc_data[0]) % 12
     asc_deg = float(asc_data[1])
 
     planet_positions = charts.rasi_chart(jd, place)
@@ -410,16 +505,18 @@ def build_ui_payload(
         if pid in PLANET_NAMES:
             transit_house_planets[rasi].append(PLANET_NAMES[pid])
 
-    _, md1 = vimsottari.get_vimsottari_dhasa_bhukthi(jd, place, dhasa_level_index=1)
-    _, md2 = vimsottari.get_vimsottari_dhasa_bhukthi(jd, place, dhasa_level_index=2)
-    _, md3 = vimsottari.get_vimsottari_dhasa_bhukthi(jd, place, dhasa_level_index=3)
-    _, md5 = vimsottari.get_vimsottari_dhasa_bhukthi(jd, place, dhasa_level_index=5)
+    raw_md1 = _vimsottari_raw_rows(jd, place, 1)
+    sookshma_level = 4 if (raw_md1 and _is_tuple_dhasa_row(raw_md1[0])) else 5
+    md1 = _normalize_dhasa_rows(raw_md1)
+    md2 = _vimsottari_rows(jd, place, 2)
+    md3 = _vimsottari_rows(jd, place, 3)
+    md5 = _vimsottari_rows(jd, place, sookshma_level)
 
     _sk0 = datetime(1988, 1, 1)
     _sk1 = datetime(2045, 1, 1)
     md5 = [
         r for r in md5
-        if _sk0 <= _parse_dhasa_dt(r[4]) < _sk1
+        if len(r) >= 5 and _sk0 <= _parse_dhasa_dt(r[4]) < _sk1
     ]
 
     l1 = sorted(md1, key=lambda r: _parse_dhasa_dt(r[1]))

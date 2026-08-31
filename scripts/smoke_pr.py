@@ -29,6 +29,22 @@ def load_fixture() -> dict[str, Any]:
     return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
 
 
+def run_dasha_normalize_unit() -> None:
+    proc = subprocess.run(
+        [python_bin(), str(ROOT / "tests" / "test_dasha_normalize.py")],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        check=False,
+    )
+    if proc.returncode != 0:
+        fail(
+            "tests/test_dasha_normalize.py failed: "
+            f"{proc.stderr.strip()[:2000] or proc.stdout.strip()[:500]}"
+        )
+    ok("tests/test_dasha_normalize.py")
+
+
 def is_record(v: Any) -> bool:
     return isinstance(v, dict)
 
@@ -271,6 +287,7 @@ def main() -> None:
     args = parser.parse_args()
 
     fixture = load_fixture()
+    run_dasha_normalize_unit()
     run_ontology_check()
     run_horoscope_engine(fixture)
     run_semantic_engine()

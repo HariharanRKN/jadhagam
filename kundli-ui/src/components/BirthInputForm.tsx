@@ -243,12 +243,21 @@ export function BirthInputForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = (await res.json()) as ChartDataPayload & { error?: string };
+      const json = (await res.json()) as ChartDataPayload & {
+        error?: string;
+        detail?: string;
+      };
       if (!res.ok) {
+        const detail =
+          typeof json.detail === "string" && json.detail.trim()
+            ? json.detail.trim().split("\n").filter(Boolean).slice(-1)[0]
+            : "";
         onError(
-          typeof json.error === "string"
-            ? json.error
-            : `Request failed (${res.status})`
+          detail
+            ? `${json.error || "Horoscope engine failed"}: ${detail.slice(0, 240)}`
+            : typeof json.error === "string"
+              ? json.error
+              : `Request failed (${res.status})`
         );
         return;
       }
