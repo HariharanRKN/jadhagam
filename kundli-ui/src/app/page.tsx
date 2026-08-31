@@ -27,6 +27,7 @@ import { isoDateKey } from "@/lib/isoDate";
 import type { ChartDataPayload } from "@/types/chartData";
 import type { SavedKundali } from "@/lib/kundalis/types";
 import { savedKundaliToFormValues } from "@/lib/kundalis/client";
+import defaultChart from "@/data/defaultChart.json";
 import styles from "./page.module.css";
 
 type TrackerTab = "kundli" | "kochar" | "marriage" | "family" | "birthTime";
@@ -263,8 +264,9 @@ function familyFormFromSaved(item: SavedKundali): FamilyFormState {
 export default function Home() {
   const { language, t, interpolate: ti } = useTranslations();
   const [dark, setDark] = useState(false);
-  const [data, setData] = useState<ChartDataPayload | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [data, setData] = useState<ChartDataPayload>(
+    defaultChart as ChartDataPayload
+  );
   const [apiError, setApiError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TrackerTab>("kundli");
   const [trackerDate, setTrackerDate] = useState("1990-05-20");
@@ -439,27 +441,6 @@ export default function Home() {
       cancelled = true;
     };
   }, [activeTab, familyHydrated]);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/chart-data.json")
-      .then((res) => {
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-        return res.json();
-      })
-      .then((json: ChartDataPayload) => {
-        if (!cancelled) {
-          setData(json);
-          setLoadError(null);
-        }
-      })
-      .catch((e: Error) => {
-        if (!cancelled) setLoadError(e.message);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -834,7 +815,7 @@ export default function Home() {
             {t("home.headerIntroA")}
             <code>horoscope.py</code>
             {t("home.headerIntroB")}
-            <code>public/chart-data.json</code>
+            <code>src/data/defaultChart.json</code>
             {t("home.headerIntroC")}
             <code>/api/horoscope</code>
             {t("home.headerIntroD")}
@@ -927,12 +908,6 @@ export default function Home() {
       {apiError && (
         <p className={styles.apiError} role="alert">
           {apiError}
-        </p>
-      )}
-
-      {loadError && (
-        <p className={styles.loadError}>
-          {t("home.loadErrorPrefix")} {loadError}. {t("home.loadErrorSuffix")}
         </p>
       )}
 
