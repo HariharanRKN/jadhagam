@@ -1,14 +1,37 @@
+import { existsSync } from "node:fs";
 import { join } from "path";
 import { runPython } from "@/lib/runPython";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
-function defaultHoroscopeScriptPath() {
+function defaultHoroscopeRepoRoot() {
+  return IS_PROD ? "/app" : join(process.cwd(), "..");
+}
+
+function resolveHoroscopeScript(repoRoot: string) {
+  if (process.env.HOROSCOPE_SCRIPT) return process.env.HOROSCOPE_SCRIPT;
+  const candidates = [
+    join(repoRoot, "horoscope.py"),
+    "/app/horoscope.py",
+    join(process.cwd(), "..", "horoscope.py"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
   return IS_PROD ? "/app/horoscope.py" : join(process.cwd(), "..", "horoscope.py");
 }
 
-function defaultHoroscopeRepoRoot() {
-  return IS_PROD ? "/app" : join(process.cwd(), "..");
+function resolvePython(repoRoot: string) {
+  if (process.env.HOROSCOPE_PYTHON) return process.env.HOROSCOPE_PYTHON;
+  const candidates = [
+    join(repoRoot, ".venv", "bin", "python"),
+    "/opt/venv/bin/python",
+    "/opt/jadhagam-venv/bin/python",
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return "python3";
 }
 
 /**
@@ -116,9 +139,9 @@ export async function POST(request: Request) {
     return Response.json({ error: msg }, { status: 400 });
   }
 
-  const scriptPath = process.env.HOROSCOPE_SCRIPT ?? defaultHoroscopeScriptPath();
   const repoRoot = defaultHoroscopeRepoRoot();
-  const pythonBin = process.env.HOROSCOPE_PYTHON ?? "python3";
+  const scriptPath = resolveHoroscopeScript(repoRoot);
+  const pythonBin = resolvePython(repoRoot);
 
   const stdinObj: Record<string, unknown> = {
     birth: payload.birth,
