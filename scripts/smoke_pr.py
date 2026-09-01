@@ -216,7 +216,7 @@ def http_get_ok(base: str, path: str) -> None:
 
 
 def smoke_http(base: str, fixture: dict[str, Any]) -> None:
-    for path in ("/", "/marriage-2", "/ask"):
+    for path in ("/", "/marriage-2", "/ask", "/api/chart-data", "/chart-data.json"):
         http_get_ok(base, path)
 
     horoscope_body = {

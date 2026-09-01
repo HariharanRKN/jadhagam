@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ChartDataPayload } from "../src/types/chartData.ts";
 import {
   buildKundaliShareJson,
@@ -115,3 +118,22 @@ assert(serialized.includes('"to"'), "serialized JSON uses to");
 assert(!serialized.includes('"start"'), "share JSON should not use start keys");
 
 console.log("ok: kundali share JSON");
+
+const here = dirname(fileURLToPath(import.meta.url));
+const bundled = JSON.parse(
+  readFileSync(join(here, "../src/data/defaultChart.json"), "utf8")
+) as ChartDataPayload;
+assert(bundled.birth?.planetsByRasi, "defaultChart.birth.planetsByRasi");
+assert(
+  typeof bundled.birth.ascendantRasi === "number",
+  "defaultChart.birth.ascendantRasi"
+);
+assert(
+  Array.isArray(bundled.natalPlanets) && bundled.natalPlanets.length >= 9,
+  "defaultChart.natalPlanets"
+);
+assert(
+  Array.isArray(bundled.vimsottari?.mahadasha) && bundled.vimsottari.mahadasha.length === 9,
+  "defaultChart vimsottari mahadasha"
+);
+console.log("ok: bundled defaultChart.json");
