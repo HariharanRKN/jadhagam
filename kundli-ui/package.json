@@ -7,7 +7,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test:export": "node --experimental-strip-types scripts/test-kundali-export.mts"
+    "test:export": "node --experimental-strip-types scripts/test-kundali-export.mts",
+    "test:family-clip": "node --experimental-strip-types scripts/test-family-period-clip.mts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

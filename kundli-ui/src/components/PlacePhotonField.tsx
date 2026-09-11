@@ -33,6 +33,7 @@ type Props = {
     lat: number;
     lng: number;
   }) => void;
+  onTextChange?: (value: string) => void;
   disabled?: boolean;
   required?: boolean;
   dark?: boolean;
@@ -59,6 +60,7 @@ export const PlacePhotonField = forwardRef<PlacePhotonFieldHandle, Props>(
       className,
       syncValue,
       onPlaceSelected,
+      onTextChange,
       disabled,
       required,
       dark,
@@ -156,6 +158,7 @@ export const PlacePhotonField = forwardRef<PlacePhotonFieldHandle, Props>(
 
     function onInputChange() {
       const q = inputRef.current?.value ?? "";
+      onTextChange?.(q);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         void runSearch(q.trim());

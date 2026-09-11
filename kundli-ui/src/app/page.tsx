@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SouthIndianChart } from "@/components/SouthIndianChart/SouthIndianChart";
 import { BirthInputForm } from "@/components/BirthInputForm";
 import { BirthTimeIdentifier } from "@/components/BirthTimeIdentifier";
@@ -10,6 +10,7 @@ import { PlanetaryTableTamil } from "@/components/tables/PlanetaryTableTamil";
 import { VimsottariExpander } from "@/components/tables/VimsottariExpander";
 import { KundaliJsonExport } from "@/components/tables/KundaliJsonExport";
 import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
+import type { LanguageCode } from "@/components/LanguageProvider";
 import { useTranslations } from "@/i18n/useTranslations";
 import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
 import {
@@ -26,6 +27,15 @@ import { isoDateKey } from "@/lib/isoDate";
 import type { ChartDataPayload } from "@/types/chartData";
 import type { SavedKundali } from "@/lib/kundalis/types";
 import { savedKundaliToFormValues } from "@/lib/kundalis/client";
+import { fetchUtcOffsetHours } from "@/lib/timezoneClient";
+import {
+  buildFamilyPeriodSummary,
+  clampIsoToRange,
+  clipDatedRows,
+  familyPeriodPresets,
+  orderedIsoRange,
+  shouldShowAntara,
+} from "@/lib/family/periodClip";
 import defaultChart from "@/data/defaultChart.json";
 import styles from "./page.module.css";
 
@@ -76,6 +86,7 @@ type FamilyFormState = {
   placeName: string;
   lat: string;
   lng: string;
+  tz: string;
   loading: boolean;
   error: string | null;
   result: ChartDataPayload | null;
@@ -174,15 +185,28 @@ function marriageVerdictLabel(
   return t("home.verdictWeak");
 }
 
-function parseDatePart(value: string) {
-  return isoDateKey(value);
+function parseFamilyTz(value: string) {
+  const tz = Number(value);
+  return Number.isFinite(tz) && tz >= -12 && tz <= 14 ? tz : null;
 }
 
-function latestStartedRow<T extends { start: string }>(rows: T[], selectedDate: string) {
-  return [...rows]
-    .filter((row) => parseDatePart(row.start) <= selectedDate)
-    .sort((a, b) => a.start.localeCompare(b.start, "en", { numeric: true }))
-    .at(-1) ?? null;
+function isFamilyFormReady(form: FamilyFormState) {
+  const [year, month, day] = form.birthDate.split("-").map(Number);
+  const [hour, minute] = form.birthTime.split(":").map(Number);
+  const lat = Number(form.lat);
+  const lng = Number(form.lng);
+  return Boolean(
+    form.birthDate &&
+      form.birthTime &&
+      form.placeName.trim() &&
+      Number.isFinite(year) &&
+      Number.isFinite(month) &&
+      Number.isFinite(day) &&
+      Number.isFinite(hour) &&
+      Number.isFinite(minute) &&
+      Number.isFinite(lat) &&
+      Number.isFinite(lng)
+  );
 }
 
 function moonRasiFromPlanets(planets: { planetId: number; rasi: number }[]) {
@@ -209,6 +233,7 @@ function createFamilyFormState(index: number): FamilyFormState {
       placeName: "Puducherry, IN",
       lat: "11.9416",
       lng: "79.8083",
+      tz: "5.5",
     },
     {
       name: "",
@@ -217,6 +242,7 @@ function createFamilyFormState(index: number): FamilyFormState {
       placeName: "",
       lat: "",
       lng: "",
+      tz: "",
     },
     {
       name: "",
@@ -225,6 +251,7 @@ function createFamilyFormState(index: number): FamilyFormState {
       placeName: "",
       lat: "",
       lng: "",
+      tz: "",
     },
     {
       name: "",
@@ -233,6 +260,7 @@ function createFamilyFormState(index: number): FamilyFormState {
       placeName: "",
       lat: "",
       lng: "",
+      tz: "",
     },
   ] as const;
 
@@ -254,10 +282,75 @@ function familyFormFromSaved(item: SavedKundali): FamilyFormState {
     placeName: values.placeName,
     lat: values.lat,
     lng: values.lng,
+    tz: values.tz,
     loading: false,
     error: null,
     result: null,
   };
+}
+
+function FamilyClipRowList({
+  title,
+  rows,
+  ascendant,
+  language,
+  emptyLabel,
+  continuesLabel,
+  housesLabel,
+  tLord,
+}: {
+  title: string;
+  rows: Array<{
+    lord: number;
+    clipStart: string;
+    clipEnd: string;
+    continuesOutside: boolean;
+    containsFocus: boolean;
+  }>;
+  ascendant: number;
+  language: LanguageCode;
+  emptyLabel: string;
+  continuesLabel: string;
+  housesLabel: string;
+  tLord: (id: number) => string;
+}) {
+  if (!rows.length) {
+    return (
+      <div className={styles.timelineRow}>
+        <strong>{title}</strong>
+        <span>{emptyLabel}</span>
+      </div>
+    );
+  }
+  return (
+    <>
+      {rows.map((row) => {
+        const houses = housesOwnedByPlanet(ascendant, row.lord);
+        return (
+          <div
+            key={`${title}-${row.lord}-${row.clipStart}`}
+            className={`${styles.timelineRow} ${
+              row.containsFocus ? styles.timelineRowFocus : ""
+            }`}
+          >
+            <strong>
+              {title}: {tLord(row.lord)}
+            </strong>
+            <span>
+              {row.clipStart} → {row.clipEnd}
+              {row.continuesOutside ? ` · ${continuesLabel}` : ""}
+            </span>
+            <span>
+              {housesLabel}:{" "}
+              {houses.length
+                ? houses.map((house) => houseOrdinal(language, house)).join(", ")
+                : "—"}
+            </span>
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 export default function Home() {
@@ -289,7 +382,9 @@ export default function Home() {
   const [marriageServerPrediction, setMarriageServerPrediction] =
     useState<MarriagePrediction | null>(null);
   const [todayIso, setTodayIso] = useState("2026-04-03");
-  const [familyInsightDate, setFamilyInsightDate] = useState("2026-04-05");
+  const [familyPeriodFrom, setFamilyPeriodFrom] = useState("2026-04-01");
+  const [familyPeriodTo, setFamilyPeriodTo] = useState("2026-04-30");
+  const [familyFocusDate, setFamilyFocusDate] = useState("2026-04-03");
   const [familyTransitSnapshot, setFamilyTransitSnapshot] =
     useState<HistoricalPositionsResponse | null>(null);
   const [familyTransitLoading, setFamilyTransitLoading] = useState(false);
@@ -297,6 +392,8 @@ export default function Home() {
   const [familyForms, setFamilyForms] = useState<FamilyFormState[]>(() =>
     Array.from({ length: 4 }, (_, index) => createFamilyFormState(index))
   );
+  const familyFormsRef = useRef(familyForms);
+  familyFormsRef.current = familyForms;
   const [formSeed, setFormSeed] = useState<ReturnType<
     typeof savedKundaliToFormValues
   > | null>(null);
@@ -372,16 +469,68 @@ export default function Home() {
     return currentBhuktiWindow(overlayedMarriageWindows, todayIso);
   }, [overlayedMarriageWindows, todayIso]);
 
+  const familyRange = useMemo(
+    () => orderedIsoRange(familyPeriodFrom, familyPeriodTo),
+    [familyPeriodFrom, familyPeriodTo]
+  );
+  const familyFocus = useMemo(
+    () => clampIsoToRange(familyFocusDate, familyRange.start, familyRange.end),
+    [familyFocusDate, familyRange.end, familyRange.start]
+  );
+  const showFamilyAntara = shouldShowAntara(familyRange.start, familyRange.end);
+
+  const familyPeriodSummary = useMemo(() => {
+    const members = familyForms.flatMap((form, index) => {
+      if (!form.result) return [];
+      const maha = clipDatedRows(
+        form.result.vimsottari.mahadasha,
+        familyRange.start,
+        familyRange.end,
+        familyFocus
+      );
+      const bhukti = clipDatedRows(
+        form.result.vimsottari.bhukti,
+        familyRange.start,
+        familyRange.end,
+        familyFocus
+      );
+      const houses = [
+        ...maha.flatMap((row) =>
+          housesOwnedByPlanet(form.result!.birth.ascendantRasi, row.lord)
+        ),
+        ...bhukti.flatMap((row) =>
+          housesOwnedByPlanet(form.result!.birth.ascendantRasi, row.lord)
+        ),
+      ];
+      return [
+        {
+          name:
+            form.result.meta.name ||
+            form.name ||
+            ti("home.profileN", { n: index + 1 }),
+          mahaLords: maha.map((row) => row.lord),
+          bhuktiLords: bhukti.map((row) => row.lord),
+          houses,
+        },
+      ];
+    });
+    return buildFamilyPeriodSummary(members);
+  }, [familyFocus, familyForms, familyRange.end, familyRange.start, ti]);
+
   useEffect(() => {
-    setTodayIso(new Date().toISOString().slice(0, 10));
-    setFamilyInsightDate(new Date().toISOString().slice(0, 10));
+    const today = new Date().toISOString().slice(0, 10);
+    setTodayIso(today);
+    const preset = familyPeriodPresets(today).thisMonth;
+    setFamilyPeriodFrom(preset.from);
+    setFamilyPeriodTo(preset.to);
+    setFamilyFocusDate(clampIsoToRange(today, preset.from, preset.to));
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     setFamilyTransitLoading(true);
     setFamilyTransitError(null);
-    fetch(`/api/history/positions?date=${encodeURIComponent(familyInsightDate)}`)
+    fetch(`/api/history/positions?date=${encodeURIComponent(familyFocus)}`)
       .then(async (res) => {
         const json = (await res.json()) as HistoricalPositionsResponse & {
           error?: string;
@@ -412,7 +561,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [familyInsightDate]);
+  }, [familyFocus]);
 
   useEffect(() => {
     if (activeTab !== "family" || familyHydrated) return;
@@ -427,13 +576,17 @@ export default function Home() {
         return json.kundalis ?? [];
       })
       .then((kundalis) => {
-        if (cancelled || !kundalis.length) return;
-        setFamilyForms(kundalis.map((item) => familyFormFromSaved(item)));
+        if (cancelled) return;
+        if (!kundalis.length) {
+          setFamilyHydrated(true);
+          return;
+        }
+        const forms = kundalis.map((item) => familyFormFromSaved(item));
+        setFamilyForms(forms);
+        setFamilyHydrated(true);
+        void computeFamilyForms(forms);
       })
       .catch(() => {
-        /* keep the default family slots if the store is empty or unavailable */
-      })
-      .finally(() => {
         if (!cancelled) setFamilyHydrated(true);
       });
     return () => {
@@ -616,31 +769,22 @@ export default function Home() {
               placeName: detail.formattedAddress,
               lat: detail.lat.toFixed(6),
               lng: detail.lng.toFixed(6),
+              tz: "",
             }
           : form
       )
     );
   }
 
-  async function computeFamilyChart(index: number) {
-    const form = familyForms[index];
+  async function computeFamilyChart(index: number, formArg?: FamilyFormState) {
+    const form = formArg ?? familyFormsRef.current[index];
+    if (!form) return;
     const [year, month, day] = form.birthDate.split("-").map(Number);
     const [hour, minute] = form.birthTime.split(":").map(Number);
     const lat = Number(form.lat);
     const lng = Number(form.lng);
 
-    if (
-      !form.birthDate ||
-      !form.birthTime ||
-      !form.placeName.trim() ||
-      !Number.isFinite(year) ||
-      !Number.isFinite(month) ||
-      !Number.isFinite(day) ||
-      !Number.isFinite(hour) ||
-      !Number.isFinite(minute) ||
-      !Number.isFinite(lat) ||
-      !Number.isFinite(lng)
-    ) {
+    if (!isFamilyFormReady(form)) {
       setFamilyForms((current) =>
         current.map((item, itemIndex) =>
           itemIndex === index
@@ -660,14 +804,12 @@ export default function Home() {
     );
 
     try {
-      const tzRes = await fetch(
-        `/api/timezone?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(
-          String(lng)
-        )}`
-      );
-      const tzJson = (await tzRes.json()) as { offsetHours?: number; error?: string };
-      if (!tzRes.ok || typeof tzJson.offsetHours !== "number") {
-        throw new Error(tzJson.error || t("home.timezoneFailed"));
+      let tzHours = parseFamilyTz(form.tz);
+      if (tzHours == null) {
+        tzHours = await fetchUtcOffsetHours(lat, lng);
+      }
+      if (tzHours == null) {
+        throw new Error(t("home.timezoneFailed"));
       }
 
       const payload: Record<string, unknown> = {
@@ -683,7 +825,7 @@ export default function Home() {
           name: form.placeName.trim(),
           lat,
           lng,
-          tz: tzJson.offsetHours,
+          tz: tzHours,
         },
         transit: null,
       };
@@ -729,7 +871,14 @@ export default function Home() {
       setFamilyForms((current) =>
         current.map((item, itemIndex) =>
           itemIndex === index
-            ? { ...item, savedId, loading: false, error: null, result: json }
+            ? {
+                ...item,
+                savedId,
+                tz: String(tzHours),
+                loading: false,
+                error: null,
+                result: json,
+              }
             : item
         )
       );
@@ -746,6 +895,14 @@ export default function Home() {
             : item
         )
       );
+    }
+  }
+
+  async function computeFamilyForms(forms: FamilyFormState[]) {
+    for (let index = 0; index < forms.length; index += 1) {
+      if (isFamilyFormReady(forms[index])) {
+        await computeFamilyChart(index, forms[index]);
+      }
     }
   }
 
@@ -789,20 +946,31 @@ export default function Home() {
       }
       const kundalis = json.kundalis ?? [];
       if (!kundalis.length) return;
-      setFamilyForms(kundalis.map((item) => familyFormFromSaved(item)));
+      const forms = kundalis.map((item) => familyFormFromSaved(item));
+      setFamilyForms(forms);
       setFamilyHydrated(true);
+      await computeFamilyForms(forms);
     } catch (err) {
       setApiError(err instanceof Error ? err.message : t("home.savedLoadError"));
     }
   }
 
   async function computeAllFamily() {
-    for (let index = 0; index < familyForms.length; index += 1) {
-      const form = familyForms[index];
-      if (form.birthDate && form.birthTime && form.placeName.trim()) {
-        await computeFamilyChart(index);
-      }
-    }
+    await computeFamilyForms(familyFormsRef.current);
+  }
+
+  function applyFamilyPeriodRange(from: string, to: string) {
+    const range = orderedIsoRange(from, to);
+    setFamilyPeriodFrom(range.start);
+    setFamilyPeriodTo(range.end);
+    setFamilyFocusDate((current) =>
+      clampIsoToRange(current, range.start, range.end)
+    );
+  }
+
+  function applyFamilyPeriodPreset(kind: "thisMonth" | "nextSixMonths" | "thisYear") {
+    const preset = familyPeriodPresets(todayIso)[kind];
+    applyFamilyPeriodRange(preset.from, preset.to);
   }
 
   return (
@@ -1380,6 +1548,7 @@ export default function Home() {
                 type="button"
                 className={styles.computeBtn}
                 onClick={() => void computeAllFamily()}
+                disabled={familyForms.some((item) => item.loading)}
               >
                 {t("home.computeAllFamily")}
               </button>
@@ -1436,6 +1605,9 @@ export default function Home() {
                       onPlaceSelected={(detail) =>
                         applyFamilyPlaceSelection(index, detail)
                       }
+                      onTextChange={(value) =>
+                        updateFamilyForm(index, "placeName", value)
+                      }
                       dark={dark}
                     />
                     <label className={styles.fieldBlock}>
@@ -1456,11 +1628,20 @@ export default function Home() {
                         onChange={(e) => updateFamilyForm(index, "lng", e.target.value)}
                       />
                     </label>
+                    <label className={styles.fieldBlock}>
+                      <span>{t("home.timezone")}</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={form.tz}
+                        onChange={(e) => updateFamilyForm(index, "tz", e.target.value)}
+                      />
+                    </label>
                   </div>
                   <button
                     type="button"
                     className={styles.computeBtn}
-                    disabled={form.loading}
+                    disabled={form.loading || familyForms.some((item) => item.loading)}
                     onClick={() => void computeFamilyChart(index)}
                   >
                     {form.loading ? t("home.computingProfile") : t("home.computeProfile")}
@@ -1478,17 +1659,117 @@ export default function Home() {
               <h2>{t("home.familyOutputsTitle")}</h2>
               <p>{t("home.familyOutputsDesc")}</p>
             </div>
+            {!familyHydrated ? (
+              <p className={styles.inlineMeta}>{t("home.loadingSavedFamily")}</p>
+            ) : null}
             <div className={styles.familyDateBar}>
-              <label className={styles.dateField}>
-                <span>{t("home.selectedDate")}</span>
-                <input
-                  type="date"
-                  value={familyInsightDate}
-                  onChange={(e) => setFamilyInsightDate(e.target.value)}
-                  max={todayIso}
-                />
-              </label>
+              <div className={styles.familyDateFields}>
+                <label className={styles.dateField}>
+                  <span>{t("home.periodFrom")}</span>
+                  <input
+                    type="date"
+                    value={familyRange.start}
+                    onChange={(e) =>
+                      applyFamilyPeriodRange(e.target.value, familyRange.end)
+                    }
+                  />
+                </label>
+                <label className={styles.dateField}>
+                  <span>{t("home.periodTo")}</span>
+                  <input
+                    type="date"
+                    value={familyRange.end}
+                    onChange={(e) =>
+                      applyFamilyPeriodRange(familyRange.start, e.target.value)
+                    }
+                  />
+                </label>
+                <label className={styles.dateField}>
+                  <span>{t("home.periodFocus")}</span>
+                  <input
+                    type="date"
+                    value={familyFocus}
+                    onChange={(e) =>
+                      setFamilyFocusDate(
+                        clampIsoToRange(
+                          e.target.value,
+                          familyRange.start,
+                          familyRange.end
+                        )
+                      )
+                    }
+                  />
+                </label>
+              </div>
+              <div className={styles.familyPresets}>
+                <button
+                  type="button"
+                  className={styles.presetBtn}
+                  onClick={() => applyFamilyPeriodPreset("thisMonth")}
+                >
+                  {t("home.periodPresetMonth")}
+                </button>
+                <button
+                  type="button"
+                  className={styles.presetBtn}
+                  onClick={() => applyFamilyPeriodPreset("nextSixMonths")}
+                >
+                  {t("home.periodPresetSixMonths")}
+                </button>
+                <button
+                  type="button"
+                  className={styles.presetBtn}
+                  onClick={() => applyFamilyPeriodPreset("thisYear")}
+                >
+                  {t("home.periodPresetYear")}
+                </button>
+              </div>
               <p className={styles.inlineMeta}>{t("home.familyDateHint")}</p>
+            </div>
+            <div className={styles.familySummary}>
+              <h3>{t("home.familySummaryTitle")}</h3>
+              <p className={styles.inlineMeta}>
+                {ti("home.familySummaryMeta", {
+                  start: familyRange.start,
+                  end: familyRange.end,
+                  count: familyPeriodSummary.memberCount,
+                })}
+              </p>
+              {familyPeriodSummary.memberCount === 0 ? (
+                <p className={styles.inlineMeta}>{t("home.familySummaryEmpty")}</p>
+              ) : familyPeriodSummary.sharedMaha.length === 0 &&
+                familyPeriodSummary.sharedBhukti.length === 0 &&
+                familyPeriodSummary.sharedHouses.length === 0 ? (
+                <p className={styles.inlineMeta}>{t("home.familySummaryNone")}</p>
+              ) : (
+                <ul className={styles.familySummaryList}>
+                  {familyPeriodSummary.sharedMaha.map((item) => (
+                    <li key={`maha-${item.lordId}`}>
+                      {ti("home.sharedMahaBullet", {
+                        lord: lordName(language, item.lordId),
+                        names: item.names.join(", "),
+                      })}
+                    </li>
+                  ))}
+                  {familyPeriodSummary.sharedBhukti.map((item) => (
+                    <li key={`bhukti-${item.lordId}`}>
+                      {ti("home.sharedBhuktiBullet", {
+                        lord: lordName(language, item.lordId),
+                        names: item.names.join(", "),
+                      })}
+                    </li>
+                  ))}
+                  {familyPeriodSummary.sharedHouses.length ? (
+                    <li>
+                      {ti("home.sharedHousesBullet", {
+                        houses: familyPeriodSummary.sharedHouses
+                          .map((house) => houseOrdinal(language, house))
+                          .join(", "),
+                      })}
+                    </li>
+                  ) : null}
+                </ul>
+              )}
             </div>
             <div className={styles.familyGrid}>
               {familyForms.map((form, index) => (
@@ -1514,85 +1795,55 @@ export default function Home() {
                       </div>
                       <div className={styles.familyModule}>
                         <h4>{t("home.dateSnapshot")}</h4>
-                        {(() => {
-                          const currentMaha = latestStartedRow(
-                            form.result.vimsottari.mahadasha,
-                            familyInsightDate
-                          );
-                          const currentBhukti = latestStartedRow(
-                            form.result.vimsottari.bhukti,
-                            familyInsightDate
-                          );
-                          const currentAntara = latestStartedRow(
-                            form.result.vimsottari.antara,
-                            familyInsightDate
-                          );
-                          const ascendant = form.result.birth.ascendantRasi;
-                          const impactedHouseText = (planetId: number | undefined) => {
-                            if (planetId == null) return "—";
-                            const houses = housesOwnedByPlanet(ascendant, planetId);
-                            return houses.length
-                              ? houses
-                                  .map((house) => houseOrdinal(language, house))
-                                  .join(", ")
-                              : "—";
-                          };
-                          return (
-                            <div className={styles.timelineList}>
-                              <div className={styles.timelineRow}>
-                                <strong>
-                                  {t("home.mahadasha")}:{" "}
-                                  {currentMaha
-                                    ? lordName(language, currentMaha.lord)
-                                    : "—"}
-                                </strong>
-                                <span>
-                                  {currentMaha
-                                    ? `${currentMaha.start} → ${currentMaha.end ?? "—"}`
-                                    : t("home.noDataForDate")}
-                                </span>
-                                <span>
-                                  {t("home.housesImpacted")}:{" "}
-                                  {impactedHouseText(currentMaha?.lord)}
-                                </span>
-                              </div>
-                              <div className={styles.timelineRow}>
-                                <strong>
-                                  {t("home.bhukti")}:{" "}
-                                  {currentBhukti
-                                    ? lordName(language, currentBhukti.lord)
-                                    : "—"}
-                                </strong>
-                                <span>
-                                  {currentBhukti
-                                    ? `${currentBhukti.start} → ${currentBhukti.end ?? "—"}`
-                                    : t("home.noDataForDate")}
-                                </span>
-                                <span>
-                                  {t("home.housesImpacted")}:{" "}
-                                  {impactedHouseText(currentBhukti?.lord)}
-                                </span>
-                              </div>
-                              <div className={styles.timelineRow}>
-                                <strong>
-                                  {t("home.antara")}:{" "}
-                                  {currentAntara
-                                    ? lordName(language, currentAntara.lord)
-                                    : "—"}
-                                </strong>
-                                <span>
-                                  {currentAntara
-                                    ? `${currentAntara.start} → ${currentAntara.end ?? "—"}`
-                                    : t("home.noDataForDate")}
-                                </span>
-                                <span>
-                                  {t("home.housesImpacted")}:{" "}
-                                  {impactedHouseText(currentAntara?.lord)}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })()}
+                        <div className={styles.timelineList}>
+                          <FamilyClipRowList
+                            title={t("home.mahadasha")}
+                            rows={clipDatedRows(
+                              form.result.vimsottari.mahadasha,
+                              familyRange.start,
+                              familyRange.end,
+                              familyFocus
+                            )}
+                            ascendant={form.result.birth.ascendantRasi}
+                            language={language}
+                            emptyLabel={t("home.noDashaInPeriod")}
+                            continuesLabel={t("home.dashaContinues")}
+                            housesLabel={t("home.housesImpacted")}
+                            tLord={(id) => lordName(language, id)}
+                          />
+                          <FamilyClipRowList
+                            title={t("home.bhukti")}
+                            rows={clipDatedRows(
+                              form.result.vimsottari.bhukti,
+                              familyRange.start,
+                              familyRange.end,
+                              familyFocus
+                            )}
+                            ascendant={form.result.birth.ascendantRasi}
+                            language={language}
+                            emptyLabel={t("home.noDashaInPeriod")}
+                            continuesLabel={t("home.dashaContinues")}
+                            housesLabel={t("home.housesImpacted")}
+                            tLord={(id) => lordName(language, id)}
+                          />
+                          {showFamilyAntara ? (
+                            <FamilyClipRowList
+                              title={t("home.antara")}
+                              rows={clipDatedRows(
+                                form.result.vimsottari.antara,
+                                familyRange.start,
+                                familyRange.end,
+                                familyFocus
+                              )}
+                              ascendant={form.result.birth.ascendantRasi}
+                              language={language}
+                              emptyLabel={t("home.noDashaInPeriod")}
+                              continuesLabel={t("home.dashaContinues")}
+                              housesLabel={t("home.housesImpacted")}
+                              tLord={(id) => lordName(language, id)}
+                            />
+                          ) : null}
+                        </div>
                       </div>
                       <div className={styles.familyModule}>
                         <h4>{t("home.kocharSection")}</h4>
@@ -1612,7 +1863,7 @@ export default function Home() {
                                 ? [moonRasiFromPlanets(form.result.natalPlanets) as number]
                                 : []
                             }
-                            title={familyInsightDate}
+                            title={familyFocus}
                             theme={theme}
                           />
                         )}
@@ -1628,7 +1879,12 @@ export default function Home() {
                       <KundaliJsonExport chart={form.result} dark={dark} compact />
                     </div>
                   ) : (
-                    <p className={styles.inlineMeta}>{t("home.computePrompt")}</p>
+                    <>
+                      {form.error ? (
+                        <p className={styles.inlineError}>{form.error}</p>
+                      ) : null}
+                      <p className={styles.inlineMeta}>{t("home.computePrompt")}</p>
+                    </>
                   )}
                 </div>
               ))}
