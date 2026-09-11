@@ -7,7 +7,6 @@ import { BirthTimeIdentifier } from "@/components/BirthTimeIdentifier";
 import { SavedKundaliList } from "@/components/SavedKundaliList";
 import { PlacePhotonField } from "@/components/PlacePhotonField";
 import { PlanetaryTableTamil } from "@/components/tables/PlanetaryTableTamil";
-import { DashaBhuktiTableTamil } from "@/components/tables/DashaBhuktiTableTamil";
 import { VimsottariExpander } from "@/components/tables/VimsottariExpander";
 import { KundaliJsonExport } from "@/components/tables/KundaliJsonExport";
 import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
@@ -943,11 +942,6 @@ export default function Home() {
             dark={dark}
           />
           <KundaliJsonExport chart={data} dark={dark} />
-          <DashaBhuktiTableTamil
-            rows={data.vimsottari.bhukti}
-            labels={data.vimsottari.labelsTa}
-            dark={dark}
-          />
           <VimsottariExpander
             mahas={data.vimsottari.mahadasha}
             bhukti={data.vimsottari.bhukti}
