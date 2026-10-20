@@ -894,13 +894,16 @@ function summaryLine(
       signLord: lordName(language, lord.actsForPlanetId),
     });
   }
+  const house = houseOrdinal(language, lord.houseFromAsc);
   return ti("antara.summaryLord", {
     name: lordName(language, lord.planetId),
     ruled: lord.ruledHouses.length
-      ? lord.ruledHouses.map((house) => houseOrdinal(language, house)).join(", ")
+      ? lord.ruledHouses.map((item) => houseOrdinal(language, item)).join(", ")
       : "—",
-    placement: ti(dignityPhraseKey(lord.dignity), { sign: rasiName(language, lord.rasi) }),
-    house: houseOrdinal(language, lord.houseFromAsc),
+    placement: ti(dignityPhraseKey(lord.dignity), {
+      sign: rasiName(language, lord.rasi),
+      house,
+    }),
   });
 }
 
