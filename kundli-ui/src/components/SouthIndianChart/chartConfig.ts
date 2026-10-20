@@ -132,13 +132,30 @@ export function getPlanetsInRasi(
   return planetsByRasi[rasi] ?? [];
 }
 
+export interface NatalChartMark {
+  rasi: number;
+  label: string;
+}
+
 export interface SouthIndianChartProps {
   planetsByRasi: PlanetsByRasiInput;
   ascendantRasi: number;
   highlightedRasis?: number[];
+  /** Cyan outline without the Moon badge. Used when a planet chip is selected. */
+  emphasisRasis?: number[];
   title?: string;
   onRasiClick?: (rasi: number) => void;
   theme?: "light" | "dark";
   /** Defaults from LanguageProvider when omitted (client only). */
   language?: LanguageCode;
+  /** When false, the lagna bar is hidden (Kochar counted from the Moon). */
+  showAscendant?: boolean;
+  /** Natal Moon sign, outlined as house 1. */
+  janmaRasi?: number;
+  janmaLabel?: string;
+  /** Show a house number in every cell, counted from this rasi. */
+  houseNumbersFrom?: number;
+  natalMarks?: NatalChartMark[];
+  highlightedPlanets?: string[];
+  retrogradePlanets?: string[];
 }

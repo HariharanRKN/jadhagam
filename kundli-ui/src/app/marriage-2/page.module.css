@@ -301,6 +301,40 @@
   color: #6c5e4d;
 }
 
+.lordOpenRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+.lordOpen {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid rgba(136, 103, 44, 0.35);
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.lordOpen span {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a6a3b;
+}
+
+.lordOpen:hover,
+.lordOpen:focus-visible {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.28);
+}
+
 .jsonBlock {
   margin-top: 0.8rem;
   padding: 1rem;

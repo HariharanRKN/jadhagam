@@ -40,6 +40,8 @@ jobs:
         run: |
           npm ci
           node --experimental-strip-types scripts/test-kundali-export.mts
+          node --experimental-strip-types scripts/test-family-period-clip.mts
+          node --experimental-strip-types scripts/test-antara-logic.mts
           npm run build
 
       # next start is incompatible with output: standalone. Dev mode uses

@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 import { BirthInputForm } from "@/components/BirthInputForm";
+import { AntaraDetail } from "@/components/antara/AntaraDetail";
 import { SouthIndianChart } from "@/components/SouthIndianChart/SouthIndianChart";
 import { dignityWord } from "@/i18n/astro";
 import { getMessage, useTranslations } from "@/i18n/useTranslations";
 import { formatMatchedRoles } from "@/lib/prediction/events/marriageLocale";
+import { periodKey, type OpenPeriod } from "@/lib/antara/period";
+import { isoDateKey } from "@/lib/isoDate";
 import type { ChartDataPayload } from "@/types/chartData";
-import type { MarriagePrediction } from "@/lib/prediction/events";
+import type { MarriageBhuktiWindow, MarriagePrediction } from "@/lib/prediction/events";
 import { lordEnglish, lordTamil } from "@/lib/tamilDasha";
 import styles from "./page.module.css";
 
@@ -25,6 +28,35 @@ function lordName(lang: "en" | "ta", id: number): string {
   return lang === "en" ? lordEnglish(id) : lordTamil(id);
 }
 
+function mahaPeriod(chart: ChartDataPayload, mahaLord: number, hintStart: string): OpenPeriod {
+  const hint = isoDateKey(hintStart);
+  const row =
+    chart.vimsottari.mahadasha.find((item) => {
+      const from = isoDateKey(item.start);
+      const to = item.end ? isoDateKey(item.end) : "";
+      return item.lord === mahaLord && from <= hint && (!to || hint < to);
+    }) ?? chart.vimsottari.mahadasha.find((item) => item.lord === mahaLord);
+  return {
+    level: "maha",
+    mahaLord,
+    bhuktiLord: null,
+    antaraLord: null,
+    start: row?.start ?? hintStart,
+    end: row?.end ?? null,
+  };
+}
+
+function bhuktiPeriod(row: MarriageBhuktiWindow): OpenPeriod {
+  return {
+    level: "bhukti",
+    mahaLord: row.maha,
+    bhuktiLord: row.bhukti,
+    antaraLord: null,
+    start: row.bhuktiStart || row.start,
+    end: row.bhuktiEnd ?? row.end,
+  };
+}
+
 export default function MarriageTwoPage() {
   const { language } = useLanguage();
   const { t } = useTranslations();
@@ -32,6 +64,7 @@ export default function MarriageTwoPage() {
   const [prediction, setPrediction] = useState<MarriagePrediction | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [periodDetail, setPeriodDetail] = useState<OpenPeriod | null>(null);
 
   const rules = useMemo(
     () => [
@@ -368,12 +401,38 @@ export default function MarriageTwoPage() {
                 {prediction.periodSequence.current ? (
                   <div className={styles.sequenceCard}>
                     <strong>{t("marriage2.currentPeriodHeading")}</strong>
+                    <div className={styles.lordOpenRow}>
+                      <button
+                        type="button"
+                        className={styles.lordOpen}
+                        data-antara-open="maha"
+                        onClick={() =>
+                          chart &&
+                          setPeriodDetail(
+                            mahaPeriod(
+                              chart,
+                              prediction.periodSequence.current!.maha,
+                              prediction.periodSequence.current!.start
+                            )
+                          )
+                        }
+                      >
+                        <span>{t("marriage2.mahaLabel")}</span>
+                        {lordName(language, prediction.periodSequence.current.maha)}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.lordOpen}
+                        data-antara-open="bhukti"
+                        onClick={() =>
+                          setPeriodDetail(bhuktiPeriod(prediction.periodSequence.current!))
+                        }
+                      >
+                        <span>{t("marriage2.bhuktiLabel")}</span>
+                        {lordName(language, prediction.periodSequence.current.bhukti)}
+                      </button>
+                    </div>
                     <p>
-                      {t("marriage2.mahaLabel")}{" "}
-                      {lordName(language, prediction.periodSequence.current.maha)} •{" "}
-                      {t("marriage2.bhuktiLabel")}{" "}
-                      {lordName(language, prediction.periodSequence.current.bhukti)}
-                      {" · "}
                       {prediction.periodSequence.current.start.slice(0, 10)}
                       {prediction.periodSequence.current.end
                         ? ` – ${prediction.periodSequence.current.end.slice(0, 10)}`
@@ -408,10 +467,30 @@ export default function MarriageTwoPage() {
                       <strong>
                         {row.start.slice(0, 10)}
                         {row.end ? ` – ${row.end.slice(0, 10)}` : ""} •{" "}
-                        {lordName(language, row.maha)}/
-                        {lordName(language, row.bhukti)} •{" "}
                         {verdictLabel(row.verdict, t)}
                       </strong>
+                      <div className={styles.lordOpenRow}>
+                        <button
+                          type="button"
+                          className={styles.lordOpen}
+                          data-antara-open="maha"
+                          onClick={() =>
+                            chart && setPeriodDetail(mahaPeriod(chart, row.maha, row.start))
+                          }
+                        >
+                          <span>{t("marriage2.mahaLabel")}</span>
+                          {lordName(language, row.maha)}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.lordOpen}
+                          data-antara-open="bhukti"
+                          onClick={() => setPeriodDetail(bhuktiPeriod(row))}
+                        >
+                          <span>{t("marriage2.bhuktiLabel")}</span>
+                          {lordName(language, row.bhukti)}
+                        </button>
+                      </div>
                       <p>
                         {t("marriage2.scoreLabel")} {row.score}
                         {row.kocharApplied
@@ -482,6 +561,15 @@ export default function MarriageTwoPage() {
           )}
         </pre>
       </section>
+      {chart && periodDetail ? (
+        <AntaraDetail
+          key={periodKey(periodDetail)}
+          chart={chart}
+          period={periodDetail}
+          onClose={() => setPeriodDetail(null)}
+          onPeriodChange={setPeriodDetail}
+        />
+      ) : null}
     </main>
   );
 }

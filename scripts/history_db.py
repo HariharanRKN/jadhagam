@@ -321,24 +321,28 @@ def build_database(path: Path, start_day: date, end_day: date) -> dict[str, obje
         )
         conn.commit()
 
+    span = conn.execute(
+        "SELECT MIN(date_ist) AS start_ist, MAX(date_ist) AS end_ist, COUNT(*) AS rows FROM planet_positions"
+    ).fetchone()
     metadata = {
-        "coverage_start_ist": start_day.isoformat(),
-        "coverage_end_ist": end_day.isoformat(),
+        "coverage_start_ist": span["start_ist"] or start_day.isoformat(),
+        "coverage_end_ist": span["end_ist"] or end_day.isoformat(),
         "granularity": "daily",
         "snapshot_time_ist": SNAPSHOT_TIME_IST.isoformat(),
         "timezone": "IST",
         "ayanamsa": "Lahiri",
         "node_type": "mean",
         "updated_at_utc": datetime.now(timezone.utc).isoformat(),
-        "row_count": str(total),
+        "row_count": str(span["rows"] if span["rows"] is not None else total),
     }
     conn.executemany(
         "INSERT OR REPLACE INTO metadata(key, value) VALUES (?, ?)",
         metadata.items(),
     )
     conn.commit()
+    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     conn.close()
-    return {"dbPath": str(path), "rowCount": total, **metadata}
+    return {"dbPath": str(path), "rowCount": metadata["row_count"], "batchRowCount": total, **metadata}
 
 
 def fetch_positions(path: Path, target_day: date) -> dict[str, object]:

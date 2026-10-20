@@ -1,4 +1,5 @@
 import { join } from "path";
+import { loadSkyRange } from "@/lib/history/readRange";
 import { runPython } from "@/lib/runPython";
 
 const IS_PROD = process.env.NODE_ENV === "production";
@@ -48,6 +49,21 @@ function parseLastJsonObject(stdout: string): unknown {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const start = searchParams.get("start")?.trim();
+  const end = searchParams.get("end")?.trim();
+  if (start || end) {
+    if (!start || !end || !/^\d{4}-\d{2}-\d{2}/.test(start) || !/^\d{4}-\d{2}-\d{2}/.test(end)) {
+      return Response.json({ error: "start and end dates are required" }, { status: 400 });
+    }
+    try {
+      const range = await loadSkyRange(start, end, searchParams.get("focus"));
+      return Response.json(range);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "range lookup failed";
+      return Response.json({ error: "Historical range lookup failed", detail }, { status: 500 });
+    }
+  }
+
   const date = searchParams.get("date")?.trim();
   if (!date) {
     return Response.json({ error: "date is required" }, { status: 400 });
