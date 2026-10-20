@@ -2,6 +2,7 @@
 
 import { VIMSOTTARI_LABELS_EN } from "@/i18n/vimsottariLabelsEn";
 import { useTranslations } from "@/i18n/useTranslations";
+import { periodKey, type OpenPeriod } from "@/lib/antara/period";
 import type {
   AntaraRow,
   BhuktiRow,
@@ -19,6 +20,8 @@ interface Props {
   sookshma: SookshmaRow[];
   labels: VimsottariLabelsTa;
   dark?: boolean;
+  onOpenPeriod?: (period: OpenPeriod) => void;
+  activeKey?: string | null;
 }
 
 function DateRange({ start, end }: { start: string; end: string | null }) {
@@ -29,6 +32,35 @@ function DateRange({ start, end }: { start: string; end: string | null }) {
   );
 }
 
+function OpenPeriodButton({
+  period,
+  label,
+  onOpenPeriod,
+}: {
+  period: OpenPeriod;
+  label: string;
+  onOpenPeriod?: (period: OpenPeriod) => void;
+}) {
+  if (!onOpenPeriod) return null;
+  return (
+    <button
+      type="button"
+      className={styles.openPeriod}
+      aria-label={label}
+      data-antara-open={period.level}
+      data-antara-start={period.start}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onOpenPeriod(period);
+      }}
+    >
+      ›
+    </button>
+  );
+}
+
 export function VimsottariExpander({
   mahas,
   bhukti,
@@ -36,8 +68,10 @@ export function VimsottariExpander({
   sookshma,
   labels,
   dark,
+  onOpenPeriod,
+  activeKey,
 }: Props) {
-  const { t, language } = useTranslations();
+  const { t, language, interpolate: ti } = useTranslations();
   const tableLabels = language === "en" ? VIMSOTTARI_LABELS_EN : labels;
   const lord = (id: number) => (language === "en" ? lordEnglish(id) : lordTamil(id));
   const intro = t("tables.vimsottariExpanderIntro");
@@ -81,31 +115,93 @@ export function VimsottariExpander({
       </p>
 
       <div className={styles.expander}>
-        {mahasSorted.map((m) => (
-          <details key={`m-${m.lord}-${m.start}`}>
+        {mahasSorted.map((m) => {
+          const mahaPeriod: OpenPeriod = {
+            level: "maha",
+            mahaLord: m.lord,
+            bhuktiLord: null,
+            antaraLord: null,
+            start: m.start,
+            end: m.end,
+          };
+          return (
+          <details
+            key={`m-${m.lord}-${m.start}`}
+            className={activeKey === periodKey(mahaPeriod) ? styles.periodActive : undefined}
+          >
             <summary>
               <span>
                 {tableLabels.mahadasha}: {lord(m.lord)}
               </span>
               <DateRange start={m.start} end={m.end} />
+              <OpenPeriodButton
+                period={mahaPeriod}
+                label={ti("antara.openPeriod", {
+                  level: tableLabels.mahadasha,
+                  lord: lord(m.lord),
+                })}
+                onOpenPeriod={onOpenPeriod}
+              />
             </summary>
             <div className={styles.nested}>
-              {bhuktiByMaha(m.lord).map((b) => (
-                <details key={`b-${b.lord}-${b.start}`}>
+              {bhuktiByMaha(m.lord).map((b) => {
+                const bhuktiPeriod: OpenPeriod = {
+                  level: "bhukti",
+                  mahaLord: m.lord,
+                  bhuktiLord: b.lord,
+                  antaraLord: null,
+                  start: b.start,
+                  end: b.end,
+                };
+                return (
+                <details
+                  key={`b-${b.lord}-${b.start}`}
+                  className={activeKey === periodKey(bhuktiPeriod) ? styles.periodActive : undefined}
+                >
                   <summary>
                     <span>
                       {tableLabels.bhukti}: {lord(b.lord)}
                     </span>
                     <DateRange start={b.start} end={b.end} />
+                    <OpenPeriodButton
+                      period={bhuktiPeriod}
+                      label={ti("antara.openPeriod", {
+                        level: tableLabels.bhukti,
+                        lord: lord(b.lord),
+                      })}
+                      onOpenPeriod={onOpenPeriod}
+                    />
                   </summary>
                   <div className={styles.nested}>
-                    {antaraBy(m.lord, b.lord).map((a) => (
-                      <details key={`a-${a.lord}-${a.start}`}>
+                    {antaraBy(m.lord, b.lord).map((a) => {
+                      const antaraPeriod: OpenPeriod = {
+                        level: "antara",
+                        mahaLord: m.lord,
+                        bhuktiLord: b.lord,
+                        antaraLord: a.lord,
+                        start: a.start,
+                        end: a.end,
+                      };
+                      return (
+                      <details
+                        key={`a-${a.lord}-${a.start}`}
+                        className={
+                          activeKey === periodKey(antaraPeriod) ? styles.periodActive : undefined
+                        }
+                      >
                         <summary>
                           <span>
                             {tableLabels.antara}: {lord(a.lord)}
                           </span>
                           <DateRange start={a.start} end={a.end} />
+                          <OpenPeriodButton
+                            period={antaraPeriod}
+                            label={ti("antara.openPeriod", {
+                              level: tableLabels.antara,
+                              lord: lord(a.lord),
+                            })}
+                            onOpenPeriod={onOpenPeriod}
+                          />
                         </summary>
                         <div className={styles.nested}>
                           {sookshmaBy(m.lord, b.lord, a.lord).map((sk) => (
@@ -121,13 +217,16 @@ export function VimsottariExpander({
                           ))}
                         </div>
                       </details>
-                    ))}
+                      );
+                    })}
                   </div>
                 </details>
-              ))}
+                );
+              })}
             </div>
           </details>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

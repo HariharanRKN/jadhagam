@@ -25,6 +25,38 @@ export type KundaliSharePeriod = {
   to: string | null;
 };
 
+export type AntaraShareDetail = {
+  level: string;
+  from: string;
+  to: string | null;
+  state: string;
+  lords: Array<{
+    role: string;
+    planet: string;
+    rasi: string;
+    houseFromLagna: number;
+    dignity: string;
+    strength: number;
+    ruledHouses: number[];
+    actsFor: string | null;
+  }>;
+  houseLinks: Array<{
+    house: number;
+    sign: string;
+    adhipathi: string;
+    karakas: string[];
+  }>;
+  highlights: string[];
+  slowPlanetChanges: Array<{
+    planet: string;
+    date: string;
+    fromSign: string;
+    toSign: string;
+    retro: boolean;
+    reentry: boolean;
+  }>;
+};
+
 export type KundaliShareJson = {
   meta: {
     name?: string;
@@ -42,6 +74,7 @@ export type KundaliShareJson = {
     antara: KundaliSharePeriod[];
     sookshma: KundaliSharePeriod[];
   };
+  antaraDetail?: AntaraShareDetail;
 };
 
 function positionFromRow(row: PlanetRow): KundaliSharePosition {
@@ -60,7 +93,10 @@ function positionFromRow(row: PlanetRow): KundaliSharePosition {
   };
 }
 
-export function buildKundaliShareJson(chart: ChartDataPayload): KundaliShareJson {
+export function buildKundaliShareJson(
+  chart: ChartDataPayload,
+  detail?: AntaraShareDetail
+): KundaliShareJson {
   const positions = natalRowsWithLagna(
     chart.natalPlanets,
     chart.natalLagna,
@@ -115,11 +151,13 @@ export function buildKundaliShareJson(chart: ChartDataPayload): KundaliShareJson
   if (chart.meta.name) meta.name = chart.meta.name;
   if (chart.meta.gender) meta.gender = chart.meta.gender;
 
-  return {
+  const json: KundaliShareJson = {
     meta,
     positions,
     periods: { mahadasha, bhukti, antara, sookshma },
   };
+  if (detail) json.antaraDetail = detail;
+  return json;
 }
 
 export function kundaliShareFilename(chart: ChartDataPayload): string {
@@ -129,6 +167,9 @@ export function kundaliShareFilename(chart: ChartDataPayload): string {
   return `${slug}-${dob}.json`;
 }
 
-export function stringifyKundaliShareJson(chart: ChartDataPayload): string {
-  return `${JSON.stringify(buildKundaliShareJson(chart), null, 2)}\n`;
+export function stringifyKundaliShareJson(
+  chart: ChartDataPayload,
+  detail?: AntaraShareDetail
+): string {
+  return `${JSON.stringify(buildKundaliShareJson(chart, detail), null, 2)}\n`;
 }

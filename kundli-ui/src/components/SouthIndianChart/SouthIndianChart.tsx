@@ -16,17 +16,37 @@ export function SouthIndianChart({
   planetsByRasi: planetsInput,
   ascendantRasi,
   highlightedRasis = [],
+  emphasisRasis = [],
   title,
   onRasiClick,
   theme = "light",
   language: languageProp,
+  showAscendant = true,
+  janmaRasi,
+  janmaLabel,
+  houseNumbersFrom,
+  natalMarks = [],
+  highlightedPlanets = [],
+  retrogradePlanets = [],
+  mutedPlanets = [],
 }: SouthIndianChartProps) {
   const { t, language: ctxLanguage } = useTranslations();
   const language = languageProp ?? ctxLanguage;
   const planetsByRasi = normalizePlanetsByRasi(planetsInput);
   const highlighted = new Set(highlightedRasis);
+  const emphasis = new Set(emphasisRasis);
+  const hotPlanets = new Set(highlightedPlanets);
+  const retrograde = new Set(retrogradePlanets);
+  const muted = new Set(mutedPlanets);
+  const marksByRasi = new Map<number, string[]>();
+  for (const mark of natalMarks) {
+    const list = marksByRasi.get(mark.rasi) ?? [];
+    list.push(mark.label);
+    marksByRasi.set(mark.rasi, list);
+  }
   const displayTitle = title ?? t("tables.defaultChartTitle");
   const moonBadge = t("tables.moonHighlight");
+  const numberOrigin = houseNumbersFrom ?? janmaRasi;
 
   const handleCellClick = (rasi: number) => {
     if (onRasiClick) {
@@ -43,12 +63,16 @@ export function SouthIndianChart({
       <div className={styles.grid}>
         {RASI_GRID.map(({ rasi, row, col }) => {
           const planets = getPlanetsInRasi(rasi, planetsByRasi);
+          const isJanma = janmaRasi != null && rasi === janmaRasi;
+          const houseNumber =
+            numberOrigin == null ? null : ((rasi - numberOrigin + 12) % 12) + 1;
+          const marks = marksByRasi.get(rasi) ?? [];
           return (
             <div
               key={rasi}
               role="button"
               tabIndex={0}
-              className={`${styles.cell} ${rasi === ascendantRasi ? styles.cellAscendant : ""} ${highlighted.has(rasi) ? styles.cellHighlighted : ""}`}
+              className={`${styles.cell} ${showAscendant && rasi === ascendantRasi ? styles.cellAscendant : ""} ${isJanma ? styles.cellJanma : ""} ${highlighted.has(rasi) || emphasis.has(rasi) ? styles.cellHighlighted : ""}`}
               style={{ gridRow: row, gridColumn: col }}
               onClick={() => handleCellClick(rasi)}
               onKeyDown={(e) => {
@@ -58,22 +82,43 @@ export function SouthIndianChart({
                 }
               }}
             >
-              <span className={styles.rasiLabel}>{getRasiCellLabel(language, rasi)}</span>
+              <span className={styles.rasiLabel}>
+                {getRasiCellLabel(language, rasi)}
+                {isJanma && janmaLabel ? (
+                  <span className={styles.janmaBadge}>{janmaLabel}</span>
+                ) : null}
+              </span>
               {highlighted.has(rasi) ? (
                 <span className={styles.highlightBadge}>{moonBadge}</span>
               ) : null}
               <div className={styles.planets}>
-                {planets.map((name, idx) => (
+                {planets.map((name, idx) => {
+                  const chipClass = muted.has(name)
+                    ? `${styles.planetChip} ${styles.planetChipMuted}`
+                    : hotPlanets.has(name)
+                      ? `${styles.planetChip} ${styles.planetChipActive}`
+                      : styles.planetChip;
+                  return (
                   <span
                     key={`${rasi}-${name}-${idx}`}
-                    className={styles.planetChip}
+                    className={chipClass}
+                    data-planet={name}
+                    data-muted={muted.has(name) ? "true" : undefined}
                     data-tooltip={getPlanetTooltipLabel(language, name)}
                     title={getPlanetTooltipLabel(language, name)}
                   >
                     {getPlanetChipLabel(language, name)}
+                    {retrograde.has(name) ? <span className={styles.retroMark}>℞</span> : null}
                   </span>
-                ))}
+                  );
+                })}
               </div>
+              {marks.length ? (
+                <span className={styles.natalMark}>{marks.join(" · ")}</span>
+              ) : null}
+              {houseNumber != null ? (
+                <span className={styles.houseNum}>{houseNumber}</span>
+              ) : null}
             </div>
           );
         })}

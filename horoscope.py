@@ -10,7 +10,6 @@ from pathlib import Path
 import swisseph as swe
 from jhora.panchanga import drik
 from jhora import const
-from jhora.horoscope.chart import charts
 
 PLANET_NAMES = {
     0: "Sun", 1: "Moon", 2: "Mars", 3: "Mercury", 4: "Jupiter",
@@ -232,7 +231,7 @@ def export_horoscope_json():
     asc_rasi = asc_data[0]
     asc_deg = float(asc_data[1])
 
-    planet_positions = charts.rasi_chart(jd, place)
+    planet_positions = _rasi_positions(jd, place)
     house_planets = {i: [] for i in range(12)}
     for entry in planet_positions:
         pid = entry[0]
@@ -245,7 +244,7 @@ def export_horoscope_json():
     now = datetime.now()
     now_hrs = now.hour + now.minute / 60.0 + now.second / 3600.0
     jd_now = swe.julday(now.year, now.month, now.day, now_hrs)
-    transit_positions = charts.rasi_chart(jd_now, place)
+    transit_positions = _rasi_positions(jd_now, place)
     transit_house_planets = {i: [] for i in range(12)}
     for entry in transit_positions:
         pid = entry[0]
@@ -372,6 +371,25 @@ def _configure_ayanamsa():
         const.use_rahu_ketu_as_true_nodes = False
 
 
+def _rasi_positions(jd, place):
+    """Lagna plus grahas, honouring mean nodes.
+
+    PyJHora's rasi chart calls dhasavarga with true nodes by default. A true
+    node within one arc-second of a sign boundary is then stored as 0 degrees
+    of the next sign. This chart uses mean nodes.
+    """
+    _configure_ayanamsa()
+    use_true = bool(getattr(const, "use_rahu_ketu_as_true_nodes", False))
+    asc_rasi, asc_deg, *_rest = drik.ascendant(jd, place)
+    planets = drik.dhasavarga(
+        jd,
+        place,
+        divisional_chart_factor=1,
+        set_rahu_ketu_as_true_nodes=use_true,
+    )
+    return [["L", (int(asc_rasi) % 12, float(asc_deg))]] + planets
+
+
 def _end_grouped(rows, key_len, dt_idx):
     """Within each group (first key_len lords), sort by start and set end to next start in group."""
     from collections import defaultdict
@@ -483,7 +501,7 @@ def build_ui_payload(
     asc_rasi = int(asc_data[0]) % 12
     asc_deg = float(asc_data[1])
 
-    planet_positions = charts.rasi_chart(jd, place)
+    planet_positions = _rasi_positions(jd, place)
     house_planets = {i: [] for i in range(12)}
     for entry in planet_positions:
         pid = entry[0]
@@ -495,7 +513,7 @@ def build_ui_payload(
 
     tr = transit_dt if transit_dt is not None else datetime.now()
     jd_now = _transit_julday(tr)
-    transit_positions = charts.rasi_chart(jd_now, place)
+    transit_positions = _rasi_positions(jd_now, place)
     transit_house_planets = {i: [] for i in range(12)}
     for entry in transit_positions:
         pid = entry[0]
@@ -742,7 +760,7 @@ def main():
     print(f"  {'Planet':<11} {'Rasi':<14} {'Degree':>8}  {'Nakshatra':<22} {'Pada'}")
     print(f"  {'─'*11} {'─'*14} {'─'*8}  {'─'*22} {'─'*4}")
 
-    planet_positions = charts.rasi_chart(jd, place)
+    planet_positions = _rasi_positions(jd, place)
 
     moon_total_long = None
     for entry in planet_positions:
@@ -873,7 +891,7 @@ def main():
     print(f"\n  Date & Time   : {now.strftime('%Y-%m-%d %H:%M:%S')} IST")
     print(f"  Place         : Pondicherry (11.9416°N, 79.8083°E)")
 
-    transit_positions = charts.rasi_chart(jd_now, place)
+    transit_positions = _rasi_positions(jd_now, place)
 
     print(f"\n  {'Planet':<11} {'Rasi':<14} {'Degree':>8}  {'Nakshatra':<22} {'Pada'}")
     print(f"  {'─'*11} {'─'*14} {'─'*8}  {'─'*22} {'─'*4}")

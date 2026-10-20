@@ -93,6 +93,24 @@ const NAKSHATRA_TAMIL = [
   "ரேவதி",
 ] as const;
 
+export function nakshatraFromLongitude(totalLongitude: number): {
+  index: number;
+  en: string;
+  ta: string;
+  pada: number;
+} {
+  const tl = ((totalLongitude % 360) + 360) % 360;
+  const nakSpan = 360 / 27;
+  const index = Math.floor(tl / nakSpan) % 27;
+  const pada = Math.floor((tl % nakSpan) / (nakSpan / 4)) + 1;
+  return {
+    index,
+    en: NAKSHATRA_EN[index],
+    ta: NAKSHATRA_TAMIL[index],
+    pada,
+  };
+}
+
 export function lagnaRowFromBirth(birth: {
   ascendantRasi: number;
   ascendantDeg?: number;
@@ -100,9 +118,7 @@ export function lagnaRowFromBirth(birth: {
   const rasi = ((birth.ascendantRasi % 12) + 12) % 12;
   const deg = typeof birth.ascendantDeg === "number" ? birth.ascendantDeg : 0;
   const tl = rasi * 30 + deg;
-  const nakSpan = 360 / 27;
-  const nakIdx = Math.floor(tl / nakSpan) % 27;
-  const pada = Math.floor((tl % nakSpan) / (nakSpan / 4)) + 1;
+  const nakshatra = nakshatraFromLongitude(tl);
   return {
     planetId: LAGNA_PLANET_ID,
     planetEn: "Lagna",
@@ -111,9 +127,9 @@ export function lagnaRowFromBirth(birth: {
     rasiTa: RASI_TAMIL[rasi] ?? "",
     degInSign: deg,
     totalLongitude: tl,
-    nakshatraEn: NAKSHATRA_EN[nakIdx],
-    nakshatraTa: NAKSHATRA_TAMIL[nakIdx],
-    pada,
+    nakshatraEn: nakshatra.en,
+    nakshatraTa: nakshatra.ta,
+    pada: nakshatra.pada,
   };
 }
 

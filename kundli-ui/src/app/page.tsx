@@ -7,7 +7,9 @@ import { BirthTimeIdentifier } from "@/components/BirthTimeIdentifier";
 import { SavedKundaliList } from "@/components/SavedKundaliList";
 import { PlacePhotonField } from "@/components/PlacePhotonField";
 import { PlanetaryTableTamil } from "@/components/tables/PlanetaryTableTamil";
+import { AntaraDetail } from "@/components/antara/AntaraDetail";
 import { VimsottariExpander } from "@/components/tables/VimsottariExpander";
+import { periodKey, type OpenPeriod } from "@/lib/antara/period";
 import { KundaliJsonExport } from "@/components/tables/KundaliJsonExport";
 import { houseOrdinal, lordName, rasiName } from "@/i18n/astro";
 import type { LanguageCode } from "@/components/LanguageProvider";
@@ -209,6 +211,28 @@ function isFamilyFormReady(form: FamilyFormState) {
   );
 }
 
+function mahaPeriodFromChart(
+  chart: ChartDataPayload,
+  mahaLord: number,
+  hintStart: string
+): OpenPeriod {
+  const hint = isoDateKey(hintStart);
+  const row =
+    chart.vimsottari.mahadasha.find((item) => {
+      const from = isoDateKey(item.start);
+      const to = item.end ? isoDateKey(item.end) : "";
+      return item.lord === mahaLord && from <= hint && (!to || hint < to);
+    }) ?? chart.vimsottari.mahadasha.find((item) => item.lord === mahaLord);
+  return {
+    level: "maha",
+    mahaLord,
+    bhuktiLord: null,
+    antaraLord: null,
+    start: row?.start ?? hintStart,
+    end: row?.end ?? null,
+  };
+}
+
 function moonRasiFromPlanets(planets: { planetId: number; rasi: number }[]) {
   return planets.find((planet) => planet.planetId === 1)?.rasi ?? null;
 }
@@ -298,10 +322,16 @@ function FamilyClipRowList({
   continuesLabel,
   housesLabel,
   tLord,
+  level,
+  onOpen,
 }: {
   title: string;
   rows: Array<{
     lord: number;
+    start: string;
+    end: string | null;
+    maha?: number;
+    bhukti?: number;
     clipStart: string;
     clipEnd: string;
     continuesOutside: boolean;
@@ -313,6 +343,8 @@ function FamilyClipRowList({
   continuesLabel: string;
   housesLabel: string;
   tLord: (id: number) => string;
+  level?: OpenPeriod["level"];
+  onOpen?: (period: OpenPeriod) => void;
 }) {
   if (!rows.length) {
     return (
@@ -326,12 +358,40 @@ function FamilyClipRowList({
     <>
       {rows.map((row) => {
         const houses = housesOwnedByPlanet(ascendant, row.lord);
+        const period: OpenPeriod | null = level
+          ? {
+              level,
+              mahaLord: level === "maha" ? row.lord : (row.maha ?? row.lord),
+              bhuktiLord: level === "maha" ? null : level === "bhukti" ? row.lord : (row.bhukti ?? null),
+              antaraLord: level === "antara" ? row.lord : null,
+              start: row.start,
+              end: row.end,
+            }
+          : null;
         return (
           <div
             key={`${title}-${row.lord}-${row.clipStart}`}
             className={`${styles.timelineRow} ${
               row.containsFocus ? styles.timelineRowFocus : ""
-            }`}
+            } ${onOpen ? styles.timelineRowButton : ""}`}
+            role={onOpen ? "button" : undefined}
+            tabIndex={onOpen ? 0 : undefined}
+            data-antara-open={level}
+            onClick={
+              onOpen && period
+                ? () => onOpen(period)
+                : undefined
+            }
+            onKeyDown={
+              onOpen && period
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onOpen(period);
+                    }
+                  }
+                : undefined
+            }
           >
             <strong>
               {title}: {tLord(row.lord)}
@@ -361,6 +421,10 @@ export default function Home() {
   );
   const [apiError, setApiError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TrackerTab>("kundli");
+  const [periodDetail, setPeriodDetail] = useState<{
+    chart: ChartDataPayload;
+    period: OpenPeriod;
+  } | null>(null);
   const [trackerDate, setTrackerDate] = useState("1990-05-20");
   const [trackerLoading, setTrackerLoading] = useState(false);
   const [trackerError, setTrackerError] = useState<string | null>(null);
@@ -1117,6 +1181,10 @@ export default function Home() {
             sookshma={data.vimsottari.sookshma}
             labels={data.vimsottari.labelsTa}
             dark={dark}
+            activeKey={
+              periodDetail?.chart === data ? periodKey(periodDetail.period) : null
+            }
+            onOpenPeriod={(period) => setPeriodDetail({ chart: data, period })}
           />
         </>
       )}
@@ -1363,8 +1431,41 @@ export default function Home() {
             {currentMarriageBhukti ? (
               <p className={styles.inlineMeta}>
                 <strong>{t("home.currentPeriodHeading")}:</strong>{" "}
-                {lordName(language, currentMarriageBhukti.maha)} /{" "}
-                {lordName(language, currentMarriageBhukti.bhukti)} ·{" "}
+                <button
+                  type="button"
+                  className={styles.inlinePeriodBtn}
+                  data-antara-open="maha"
+                  onClick={() =>
+                    setPeriodDetail({
+                      chart: data,
+                      period: mahaPeriodFromChart(data, currentMarriageBhukti.maha, currentMarriageBhukti.start),
+                    })
+                  }
+                >
+                  {lordName(language, currentMarriageBhukti.maha)}
+                </button>
+                {" / "}
+                <button
+                  type="button"
+                  className={styles.inlinePeriodBtn}
+                  data-antara-open="bhukti"
+                  onClick={() =>
+                    setPeriodDetail({
+                      chart: data,
+                      period: {
+                        level: "bhukti",
+                        mahaLord: currentMarriageBhukti.maha,
+                        bhuktiLord: currentMarriageBhukti.bhukti,
+                        antaraLord: null,
+                        start: currentMarriageBhukti.bhuktiStart || currentMarriageBhukti.start,
+                        end: currentMarriageBhukti.bhuktiEnd ?? currentMarriageBhukti.end,
+                      },
+                    })
+                  }
+                >
+                  {lordName(language, currentMarriageBhukti.bhukti)}
+                </button>
+                {" · "}
                 {isoDateKey(currentMarriageBhukti.start)}
                 {currentMarriageBhukti.end
                   ? ` – ${isoDateKey(currentMarriageBhukti.end)}`
@@ -1454,8 +1555,43 @@ export default function Home() {
                               ? formatMatchedRoles(language, row.matchedRoles)
                               : t("home.noMarriageRoles")}
                           </td>
-                          <td data-label={t("home.mahadasha")}>{lordName(language, row.maha)}</td>
-                          <td data-label={t("home.bhukti")}>{lordName(language, row.bhukti)}</td>
+                          <td data-label={t("home.mahadasha")}>
+                            <button
+                              type="button"
+                              className={styles.inlinePeriodBtn}
+                              data-antara-open="maha"
+                              onClick={() =>
+                                setPeriodDetail({
+                                  chart: data,
+                                  period: mahaPeriodFromChart(data, row.maha, row.start),
+                                })
+                              }
+                            >
+                              {lordName(language, row.maha)}
+                            </button>
+                          </td>
+                          <td data-label={t("home.bhukti")}>
+                            <button
+                              type="button"
+                              className={styles.inlinePeriodBtn}
+                              data-antara-open="bhukti"
+                              onClick={() =>
+                                setPeriodDetail({
+                                  chart: data,
+                                  period: {
+                                    level: "bhukti",
+                                    mahaLord: row.maha,
+                                    bhuktiLord: row.bhukti,
+                                    antaraLord: null,
+                                    start: row.bhuktiStart || row.start,
+                                    end: row.bhuktiEnd ?? row.end,
+                                  },
+                                })
+                              }
+                            >
+                              {lordName(language, row.bhukti)}
+                            </button>
+                          </td>
                           <td data-label={t("home.scoreLabel")}>
                             {row.score} · {marriageVerdictLabel(row.verdict, t)}
                             {row.kocharApplied
@@ -1798,6 +1934,7 @@ export default function Home() {
                         <div className={styles.timelineList}>
                           <FamilyClipRowList
                             title={t("home.mahadasha")}
+                            level="maha"
                             rows={clipDatedRows(
                               form.result.vimsottari.mahadasha,
                               familyRange.start,
@@ -1810,9 +1947,13 @@ export default function Home() {
                             continuesLabel={t("home.dashaContinues")}
                             housesLabel={t("home.housesImpacted")}
                             tLord={(id) => lordName(language, id)}
+                            onOpen={(period) =>
+                              setPeriodDetail({ chart: form.result!, period })
+                            }
                           />
                           <FamilyClipRowList
                             title={t("home.bhukti")}
+                            level="bhukti"
                             rows={clipDatedRows(
                               form.result.vimsottari.bhukti,
                               familyRange.start,
@@ -1825,10 +1966,14 @@ export default function Home() {
                             continuesLabel={t("home.dashaContinues")}
                             housesLabel={t("home.housesImpacted")}
                             tLord={(id) => lordName(language, id)}
+                            onOpen={(period) =>
+                              setPeriodDetail({ chart: form.result!, period })
+                            }
                           />
                           {showFamilyAntara ? (
                             <FamilyClipRowList
                               title={t("home.antara")}
+                              level="antara"
                               rows={clipDatedRows(
                                 form.result.vimsottari.antara,
                                 familyRange.start,
@@ -1841,6 +1986,9 @@ export default function Home() {
                               continuesLabel={t("home.dashaContinues")}
                               housesLabel={t("home.housesImpacted")}
                               tLord={(id) => lordName(language, id)}
+                              onOpen={(period) =>
+                                setPeriodDetail({ chart: form.result!, period })
+                              }
                             />
                           ) : null}
                         </div>
@@ -1875,6 +2023,14 @@ export default function Home() {
                         sookshma={form.result.vimsottari.sookshma}
                         labels={form.result.vimsottari.labelsTa}
                         dark={dark}
+                        activeKey={
+                          periodDetail?.chart === form.result
+                            ? periodKey(periodDetail.period)
+                            : null
+                        }
+                        onOpenPeriod={(period) =>
+                          setPeriodDetail({ chart: form.result!, period })
+                        }
                       />
                       <KundaliJsonExport chart={form.result} dark={dark} compact />
                     </div>
@@ -1892,6 +2048,18 @@ export default function Home() {
           </section>
         </div>
       )}
+      {periodDetail ? (
+        <AntaraDetail
+          key={periodKey(periodDetail.period)}
+          chart={periodDetail.chart}
+          period={periodDetail.period}
+          dark={dark}
+          onClose={() => setPeriodDetail(null)}
+          onPeriodChange={(period) =>
+            setPeriodDetail((current) => (current ? { ...current, period } : current))
+          }
+        />
+      ) : null}
     </div>
   );
 }

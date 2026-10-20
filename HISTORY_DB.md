@@ -4,7 +4,7 @@ This project now supports a local historical database of daily planetary positio
 
 ## Snapshot model
 
-- Coverage: from `1960-01-01`
+- Coverage: from `1960-01-01` through `2080-12-31`
 - Granularity: daily
 - Time basis: `12:00:00 IST` for each `date_ist`
 - Ayanamsa: Lahiri
@@ -21,7 +21,7 @@ The build/query script lives at:
 ## Rebuild locally
 
 ```bash
-python3 scripts/history_db.py build --start-date 1960-01-01 --end-date 2026-04-03
+python3 scripts/history_db.py build --start-date 1960-01-01 --end-date 2080-12-31
 ```
 
 To rebuild through today:
@@ -54,6 +54,7 @@ python3 scripts/history_db.py search-rasi \
 These routes are exposed from the Next.js app:
 
 - `GET /api/history/positions?date=1990-05-20`
+- `GET /api/history/positions?start=2024-08-14&end=2025-01-10` (daily rows for a period; dates missing from SQLite are computed live)
 - `GET /api/history/search?planet=sukra&planet=guru&rasi=mesha&startDate=2006-04-03&endDate=2026-04-03`
 
 Notes:
