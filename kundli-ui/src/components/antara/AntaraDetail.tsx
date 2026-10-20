@@ -634,6 +634,7 @@ export function AntaraDetail({ chart, period, dark, onClose, onPeriodChange }: P
                 retrogradePlanets={
                   mode === "kochar" && selectedDay ? retrogradeNames(days, selectedDay.dateIst) : []
                 }
+                mutedPlanets={mode === "kochar" && step === "month" ? ["Moon"] : []}
                 title={mode === "natal" ? t("antara.chartTitleNatal") : formatDay(selected, lang)}
                 theme={dark ? "dark" : "light"}
               />
@@ -670,7 +671,8 @@ export function AntaraDetail({ chart, period, dark, onClose, onPeriodChange }: P
               <span>
                 {moon?.rasi == null || moonRasi == null
                   ? t("antara.loadingSky")
-                  : ti("antara.moonLine", {
+                  : ti(selected === today ? "antara.moonLine" : "antara.moonLineOn", {
+                      date: formatDay(selected, lang),
                       sign: rasiName(lang, moon.rasi),
                       house: houseOrdinal(lang, houseFromNatalMoon(moonRasi, moon.rasi)),
                     })}
@@ -1059,7 +1061,7 @@ function SlowSummary({
           planet: lordName(language, planetId),
           from: rasiName(language, change.fromRasi),
           to: rasiName(language, change.toRasi),
-          date: change.date,
+          date: formatDay(change.date, language),
         })
       )
       .join(" · ");

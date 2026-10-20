@@ -28,6 +28,7 @@ export function SouthIndianChart({
   natalMarks = [],
   highlightedPlanets = [],
   retrogradePlanets = [],
+  mutedPlanets = [],
 }: SouthIndianChartProps) {
   const { t, language: ctxLanguage } = useTranslations();
   const language = languageProp ?? ctxLanguage;
@@ -36,6 +37,7 @@ export function SouthIndianChart({
   const emphasis = new Set(emphasisRasis);
   const hotPlanets = new Set(highlightedPlanets);
   const retrograde = new Set(retrogradePlanets);
+  const muted = new Set(mutedPlanets);
   const marksByRasi = new Map<number, string[]>();
   for (const mark of natalMarks) {
     const list = marksByRasi.get(mark.rasi) ?? [];
@@ -90,17 +92,26 @@ export function SouthIndianChart({
                 <span className={styles.highlightBadge}>{moonBadge}</span>
               ) : null}
               <div className={styles.planets}>
-                {planets.map((name, idx) => (
+                {planets.map((name, idx) => {
+                  const chipClass = muted.has(name)
+                    ? `${styles.planetChip} ${styles.planetChipMuted}`
+                    : hotPlanets.has(name)
+                      ? `${styles.planetChip} ${styles.planetChipActive}`
+                      : styles.planetChip;
+                  return (
                   <span
                     key={`${rasi}-${name}-${idx}`}
-                    className={`${styles.planetChip} ${hotPlanets.has(name) ? styles.planetChipActive : ""}`}
+                    className={chipClass}
+                    data-planet={name}
+                    data-muted={muted.has(name) ? "true" : undefined}
                     data-tooltip={getPlanetTooltipLabel(language, name)}
                     title={getPlanetTooltipLabel(language, name)}
                   >
                     {getPlanetChipLabel(language, name)}
                     {retrograde.has(name) ? <span className={styles.retroMark}>℞</span> : null}
                   </span>
-                ))}
+                  );
+                })}
               </div>
               {marks.length ? (
                 <span className={styles.natalMark}>{marks.join(" · ")}</span>

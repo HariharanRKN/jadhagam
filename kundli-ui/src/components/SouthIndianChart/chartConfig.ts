@@ -158,4 +158,6 @@ export interface SouthIndianChartProps {
   natalMarks?: NatalChartMark[];
   highlightedPlanets?: string[];
   retrogradePlanets?: string[];
+  /** Planet names drawn in grey. The Month step uses this for the fast Moon. */
+  mutedPlanets?: string[];
 }
