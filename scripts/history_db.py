@@ -132,9 +132,8 @@ def compute_snapshot(day: date) -> SnapshotRow:
     warnings.filterwarnings("ignore")
     with contextlib.redirect_stdout(io.StringIO()):
         from jhora import const
-        from jhora.horoscope.chart import charts
         from jhora.panchanga import drik
-        from horoscope import _planet_table_rows, _transit_julday
+        from horoscope import _planet_table_rows, _rasi_positions, _transit_julday
 
     drik.set_ayanamsa_mode("LAHIRI")
     const.use_rahu_ketu_as_true_nodes = False
@@ -142,7 +141,7 @@ def compute_snapshot(day: date) -> SnapshotRow:
     dt_ist = snapshot_datetime_ist(day)
     jd = _transit_julday(dt_ist)
     place = drik.Place("IST Reference", 13.0827, 80.2707, 5.5)
-    planet_positions = charts.rasi_chart(jd, place)
+    planet_positions = _rasi_positions(jd, place)
 
     by_planet_id = {
         row["planetId"]: row

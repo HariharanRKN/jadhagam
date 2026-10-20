@@ -8,6 +8,7 @@ import { useTranslations } from "@/i18n/useTranslations";
 import { collectKocharFlags, type KocharFlag } from "@/lib/antara/flags";
 import { buildPeriodImpact, type HouseLink, type LordImpact } from "@/lib/antara/impact";
 import { houseFromNatalMoon, moonSignReadout } from "@/lib/antara/moonHouses";
+import { relateLords, type LordRelation, type NaturalRelation, type PlacementTone } from "@/lib/antara/lordRelations";
 import {
   addIsoDays,
   calendarDuration,
@@ -16,6 +17,7 @@ import {
   clampIsoDate,
   daysBetween,
   defaultDateStep,
+  durationSegments,
   initialSelectedDate,
   periodKey,
   periodTiming,
@@ -24,6 +26,7 @@ import {
   stepDays,
   stepSibling,
   type DateStep,
+  type DurationUnit,
   type OpenPeriod,
   type PeriodLevel,
 } from "@/lib/antara/period";
@@ -270,12 +273,9 @@ export function AntaraDetail({ chart, period, dark, onClose, onPeriodChange }: P
   }
 
   const duration = calendarDuration(start, end);
-  const durationText =
-    duration.years > 0
-      ? ti("antara.durationYears", duration)
-      : duration.months > 0
-        ? ti("antara.durationMonths", duration)
-        : ti("antara.durationDays", { days: duration.days });
+  const durationText = durationSegments(duration)
+    .map((part) => ti(durationKey(part.unit, part.count), { count: part.count }))
+    .join(" ");
   const timing = periodTiming(start, end, todayKey());
   const timingClass =
     timing === "current" ? styles.pillCurrent : timing === "upcoming" ? styles.pillUpcoming : styles.pillPast;
@@ -531,6 +531,19 @@ export function AntaraDetail({ chart, period, dark, onClose, onPeriodChange }: P
               </tbody>
             </table>
           </div>
+          {impact.lords.length > 1 ? (
+            <div className={styles.relations} data-testid="antara-relations">
+              <h3>{t("antara.lordRelations")}</h3>
+              {relateLords(impact.lords).map((relation) => (
+                <div key={`${relation.left.role}-${relation.right.role}`} className={styles.relation}>
+                  <strong>
+                    {t(roleHeading(relation.left.role))} · {t(roleHeading(relation.right.role))}
+                  </strong>
+                  <p>{relationCopy(relation, lang, t, ti)}</p>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {impact.extras.length ? (
             <div className={styles.chips}>
               <span className={styles.note}>{t("antara.alsoInfluencing")}</span>
@@ -886,10 +899,67 @@ function summaryLine(
     ruled: lord.ruledHouses.length
       ? lord.ruledHouses.map((house) => houseOrdinal(language, house)).join(", ")
       : "—",
-    dignity: dignityLabel(lord.dignity, t),
-    sign: rasiName(language, lord.rasi),
+    placement: ti(dignityPhraseKey(lord.dignity), { sign: rasiName(language, lord.rasi) }),
     house: houseOrdinal(language, lord.houseFromAsc),
   });
+}
+
+function durationKey(unit: DurationUnit, count: number) {
+  if (unit === "year") return count === 1 ? "antara.oneYear" : "antara.manyYears";
+  if (unit === "month") return count === 1 ? "antara.oneMonth" : "antara.manyMonths";
+  return count === 1 ? "antara.oneDay" : "antara.manyDays";
+}
+
+function dignityPhraseKey(dignity: LordImpact["dignity"]) {
+  if (dignity === "ucham") return "antara.dignityPhraseUcham";
+  if (dignity === "neecham") return "antara.dignityPhraseNeecham";
+  if (dignity === "moolatrikona") return "antara.dignityPhraseMoolatrikona";
+  if (dignity === "own_sign") return "antara.dignityPhraseOwn";
+  return "antara.dignityPhraseOrdinary";
+}
+
+function relationWord(relation: NaturalRelation, t: (key: string) => string) {
+  if (relation === "same") return t("antara.naturalSame");
+  if (relation === "friend") return t("antara.naturalFriend");
+  if (relation === "enemy") return t("antara.naturalEnemy");
+  return t("antara.naturalNeutral");
+}
+
+function toneWord(tone: PlacementTone, t: (key: string) => string) {
+  if (tone === "supportive") return t("antara.toneSupportive");
+  if (tone === "friction") return t("antara.toneFriction");
+  return t("antara.toneNeutral");
+}
+
+function relationCopy(
+  relation: LordRelation,
+  language: "en" | "ta",
+  t: (key: string) => string,
+  ti: (key: string, vars: Record<string, string | number>) => string
+) {
+  const left = lordName(language, relation.left.planetId);
+  const right = lordName(language, relation.right.planetId);
+  const tone = toneWord(relation.placement, t);
+  if (relation.left.planetId === relation.right.planetId) {
+    return `${ti("antara.relationNatural", { relation: t("antara.naturalSame") })} ${ti("antara.relationSamePlace", { tone })}`;
+  }
+  const natural =
+    relation.leftToRight === relation.rightToLeft
+      ? ti("antara.relationNatural", { relation: relationWord(relation.leftToRight, t) })
+      : ti("antara.relationNaturalBoth", {
+          left,
+          right,
+          leftToRight: relationWord(relation.leftToRight, t),
+          rightToLeft: relationWord(relation.rightToLeft, t),
+        });
+  const placement = ti("antara.relationPlacement", {
+    left,
+    right,
+    rightFromLeft: houseOrdinal(language, relation.houseOfRightFromLeft),
+    leftFromRight: houseOrdinal(language, relation.houseOfLeftFromRight),
+    tone,
+  });
+  return `${natural} ${placement}`;
 }
 
 function linkCaption(

@@ -1,6 +1,8 @@
 import type { ChartDataPayload } from "@/types/chartData";
 import { isoDateKey } from "@/lib/isoDate";
 
+export { durationSegments, type DurationUnit } from "./duration";
+
 export type PeriodLevel = "maha" | "bhukti" | "antara";
 
 export type OpenPeriod = {

@@ -6,7 +6,7 @@
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 40;
+  z-index: 1200;
   width: min(560px, 100%);
   height: 100vh;
   height: 100dvh;
@@ -154,8 +154,8 @@
 
 .strip {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
   padding: 0 20px 12px;
 }
 
@@ -333,6 +333,29 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+}
+
+.relations {
+  margin-top: 14px;
+}
+
+.relations h3 {
+  margin-bottom: 8px;
+}
+
+.relation {
+  padding: 8px 0;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.relation p {
+  margin: 4px 0 0;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.panelDark .relation p {
+  color: #cbd5e1;
 }
 
 .mode {
@@ -691,7 +714,7 @@
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 39;
+    z-index: 1190;
     background: rgba(15, 23, 42, 0.35);
   }
 

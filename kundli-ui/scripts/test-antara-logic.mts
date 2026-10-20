@@ -1,12 +1,15 @@
 import { DatabaseSync } from "node:sqlite";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { placementTone, naturalRelation, relateLords } from "../src/lib/antara/lordRelations.ts";
 import {
   grahaDrishtiHouses,
   houseFromNatalMoon,
   moonSignReadout,
   saturnFromNatalMoon,
 } from "../src/lib/antara/moonHouses.ts";
+import { durationSegments } from "../src/lib/antara/duration.ts";
 import {
   detectSignChanges,
   markerShowsRetro,
@@ -92,5 +95,49 @@ db.close();
 assert(coverage.value >= "2080-12-31", `coverage end ${coverage.value} reaches 2080`);
 assert(ends.date_ist >= "2080-12-31", "last row reaches 2080-12-31");
 assert(count.n >= 44000, `row count ${count.n} covers 1960-2080`);
+
+for (const house of [1, 4, 5, 7, 9, 10]) {
+  assert(placementTone(0, house - 1) === "supportive", `house ${house} is supportive`);
+}
+for (const house of [2, 6, 8, 12]) {
+  assert(placementTone(0, house - 1) === "friction", `house ${house} is friction`);
+}
+for (const house of [3, 11]) {
+  assert(placementTone(0, house - 1) === "neutral", `house ${house} is neutral`);
+}
+assert(placementTone(3, 3) === "supportive", "same sign is kendra and trikona");
+assert(placementTone(11, 0) === "friction", "the next sign is the 2nd, and the reverse is the 12th");
+
+assert(naturalRelation(0, 1) === "friend", "Sun sees the Moon as a friend");
+assert(naturalRelation(0, 6) === "enemy", "Sun sees Saturn as an enemy");
+assert(naturalRelation(0, 3) === "neutral", "Sun sees Mercury as neutral");
+assert(naturalRelation(3, 0) === "friend", "Mercury sees the Sun as a friend");
+assert(naturalRelation(7, 5) === "friend", "Rahu sees Venus as a friend");
+assert(naturalRelation(8, 3) === "enemy", "Ketu sees Mercury as an enemy");
+assert(naturalRelation(4, 4) === "same", "a planet with itself is the same planet");
+
+const pairs = relateLords([
+  { role: "maha", planetId: 6, rasi: 10 },
+  { role: "bhukti", planetId: 4, rasi: 6 },
+  { role: "antara", planetId: 0, rasi: 0 },
+]);
+assert(pairs.length === 3, "three lords make three pairs");
+assert(pairs[0].placement === "supportive", "Aquarius to Libra is the 9th, a trikona");
+assert(pairs[0].houseOfRightFromLeft === 9 && pairs[0].houseOfLeftFromRight === 5, "9th and 5th are mutual");
+
+const oneMonth = durationSegments({ years: 0, months: 1, days: 14 });
+assert(oneMonth.length === 2 && oneMonth[0].count === 1 && oneMonth[0].unit === "month", "one month is singular");
+assert(oneMonth[1].count === 14 && oneMonth[1].unit === "day", "fourteen days stay plural");
+const oneDay = durationSegments({ years: 0, months: 0, days: 1 });
+assert(oneDay.length === 1 && oneDay[0].unit === "day" && oneDay[0].count === 1, "a single day is singular");
+
+const bundled = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../src/data/defaultChart.json"), "utf8")
+) as { natalPlanets: Array<{ planetEn: string; degInSign: number; nakshatraEn?: string }> };
+const bundledRahu = bundled.natalPlanets.find((planet) => planet.planetEn === "Rahu");
+const bundledKetu = bundled.natalPlanets.find((planet) => planet.planetEn === "Ketu");
+assert(bundledRahu && bundledRahu.degInSign > 0 && bundledRahu.degInSign < 1, "mean Rahu is not snapped to 0.0°");
+assert(bundledKetu && bundledKetu.degInSign > 0, "mean Ketu keeps the same offset");
+assert(bundledRahu?.nakshatraEn === "Vishakha", "English nakshatra is stored for Rahu");
 
 console.log("ok: antara sign changes, moon houses, history coverage");

@@ -5,6 +5,7 @@ import type {
   HouseAnalysis,
   InfluenceRole,
 } from "@/lib/prediction/house-analysis/types";
+import { nakshatraFromLongitude } from "@/lib/natalLagna";
 import type { PeriodLevel } from "./period";
 
 export type LordImpact = {
@@ -114,14 +115,15 @@ export function buildPeriodImpact(
       .filter((house) => house.bhavagam.houseLord.planetId === lord.planetId)
       .map((house) => house.houseNumber);
     const isNode = lord.planetId === 7 || lord.planetId === 8;
+    const nakshatra = nakshatraFromLongitude(row.totalLongitude);
     lordImpacts.push({
       role: lord.role,
       planetId: lord.planetId,
       rasi: row.rasi,
       degInSign: row.degInSign,
-      nakshatraEn: row.nakshatraEn ?? row.nakshatraTa,
-      nakshatraTa: row.nakshatraTa,
-      pada: row.pada,
+      nakshatraEn: nakshatra.en,
+      nakshatraTa: nakshatra.ta,
+      pada: nakshatra.pada,
       houseFromAsc: occupied.houseNumber,
       dignity: occupant.dignity,
       influence: occupant.role,
