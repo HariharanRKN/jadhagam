@@ -91,6 +91,57 @@ const count = db.prepare("SELECT COUNT(*) AS n FROM planet_positions").get() as 
 const ends = db.prepare("SELECT date_ist FROM planet_positions ORDER BY date_ist DESC LIMIT 1").get() as {
   date_ist: string;
 };
+const span = db
+  .prepare("SELECT MIN(date_ist) AS start, MAX(date_ist) AS end, COUNT(*) AS n FROM planet_positions")
+  .get() as { start: string; end: string; n: number };
+const nodeType = db.prepare("SELECT value FROM metadata WHERE key = 'node_type'").get() as { value: string };
+assert(nodeType.value === "mean", "the daily file records mean nodes");
+assert(span.start === "1960-01-01" && span.end === "2080-12-31", "coverage is 1960-01-01 through 2080-12-31");
+assert(span.n === 44196, `daily rows ${span.n} leave a gap in 1960-2080`);
+
+type NodeRow = { rahu_long: number; rahu_rasi: number; ketu_long: number; ketu_rasi: number };
+const noon = db.prepare("SELECT rahu_long, rahu_rasi, ketu_long, ketu_rasi FROM planet_positions WHERE date_ist = ?").get(
+  "2026-10-20"
+) as NodeRow;
+// Swiss Ephemeris mean node, Lahiri, 12:00 IST on this date is 302.4609°.
+assert(Math.abs(noon.rahu_long - 302.4609) < 0.02, `2026-10-20 Rahu ${noon.rahu_long} is the mean node`);
+assert(Math.abs(noon.rahu_long - 303.814) > 1, "2026-10-20 Rahu is no longer the true node");
+assert(noon.rahu_rasi === 10 && noon.ketu_rasi === 4, "Rahu is in Aquarius and Ketu in Leo");
+const separation = (((noon.ketu_long - noon.rahu_long) % 360) + 360) % 360;
+assert(Math.abs(separation - 180) < 0.001, "Ketu stays opposite Rahu");
+
+function rasiOn(date: string, planet: "rahu" | "ketu") {
+  const row = db.prepare(`SELECT ${planet}_rasi AS rasi FROM planet_positions WHERE date_ist = ?`).get(date) as {
+    rasi: number;
+  };
+  return row.rasi;
+}
+assert(rasiOn("2026-11-25", "rahu") === 10 && rasiOn("2026-11-26", "rahu") === 10, "26 Nov 2026 is no longer a Rahu sign change");
+assert(rasiOn("2026-12-05", "rahu") === 10 && rasiOn("2026-12-06", "rahu") === 9, "mean Rahu enters Capricorn on 6 Dec 2026");
+assert(rasiOn("2026-12-05", "ketu") === 4 && rasiOn("2026-12-06", "ketu") === 3, "mean Ketu enters Cancer on 6 Dec 2026");
+
+const windowRows = db
+  .prepare(
+    "SELECT date_ist, rahu_rasi, rahu_long, ketu_rasi, ketu_long FROM planet_positions WHERE date_ist >= ? AND date_ist <= ? ORDER BY date_ist"
+  )
+  .all("2026-11-01", "2026-12-10") as Array<{
+  date_ist: string;
+  rahu_rasi: number;
+  rahu_long: number;
+  ketu_rasi: number;
+  ketu_long: number;
+}>;
+const nodeMarkers = detectSignChanges(
+  windowRows.flatMap((row) => [
+    { date: row.date_ist, planetId: 7, rasi: row.rahu_rasi, longitude: row.rahu_long },
+    { date: row.date_ist, planetId: 8, rasi: row.ketu_rasi, longitude: row.ketu_long },
+  ])
+);
+assert(nodeMarkers.length === 2 && nodeMarkers.every((change) => change.date === "2026-12-06"), "slider markers use 6 Dec 2026");
+assert(
+  nodeMarkers.every((change) => change.direction === "retro" && !markerShowsRetro(change)),
+  "node markers stay retrograde and unmarked with R"
+);
 db.close();
 assert(coverage.value >= "2080-12-31", `coverage end ${coverage.value} reaches 2080`);
 assert(ends.date_ist >= "2080-12-31", "last row reaches 2080-12-31");
