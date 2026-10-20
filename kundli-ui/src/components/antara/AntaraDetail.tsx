@@ -66,6 +66,16 @@ function formatDay(iso: string, language: "en" | "ta") {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+function formatMonth(iso: string, language: "en" | "ta") {
+  const [year, month] = isoDateKey(iso).split("-").map(Number);
+  if (!year || !month) return iso;
+  return new Intl.DateTimeFormat(language === "ta" ? "ta-IN" : "en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
 function planetsByRasi(positions: Record<string, SkyPlanet>) {
   const grouped: Record<string, string[]> = {};
   for (const planet of Object.values(positions)) {
@@ -430,17 +440,31 @@ export function AntaraDetail({ chart, period, dark, onClose, onPeriodChange }: P
         {summary ? <div className={styles.summary}>{summary}</div> : null}
 
         {children.length ? (
-          <div className={styles.strip} aria-label={period.level === "maha" ? t("antara.bhuktisInMaha") : t("antara.antarasInBhukti")}>
-            {children.map((child) => (
-              <button
-                key={periodKey(child)}
-                type="button"
-                className={`${styles.stripBtn} ${periodKey(child) === periodKey(period) ? styles.stripBtnOn : ""}`}
-                onClick={() => onPeriodChange(child)}
-              >
-                {lordName(lang, child.level === "bhukti" ? child.bhuktiLord ?? child.mahaLord : child.antaraLord ?? child.mahaLord)}
-              </button>
-            ))}
+          <div className={styles.childPeriods} data-testid="antara-children">
+            <h3 className={styles.childLabel}>
+              {period.level === "maha" ? t("antara.bhuktisInMaha") : t("antara.antarasInBhukti")}
+            </h3>
+            <div
+              className={styles.strip}
+              aria-label={period.level === "maha" ? t("antara.bhuktisInMaha") : t("antara.antarasInBhukti")}
+            >
+              {children.map((child) => {
+                const lordId =
+                  child.level === "bhukti"
+                    ? child.bhuktiLord ?? child.mahaLord
+                    : child.antaraLord ?? child.mahaLord;
+                return (
+                  <button
+                    key={periodKey(child)}
+                    type="button"
+                    className={`${styles.stripBtn} ${periodKey(child) === periodKey(period) ? styles.stripBtnOn : ""}`}
+                    onClick={() => onPeriodChange(child)}
+                  >
+                    {lordName(lang, lordId)} · {formatMonth(child.start, lang)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ) : null}
 
